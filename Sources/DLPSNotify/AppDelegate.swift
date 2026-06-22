@@ -83,16 +83,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if recent.isEmpty {
             addDisabled("Noch keine neuen Games erfasst", to: menu)
         } else {
-            addDisabled("Zuletzt:", to: menu)
-            for item in recent.prefix(15) {
-                let icon = item.isNew ? "🎮" : "🔄"
-                let suffix = item.platform.map { " (\($0))" } ?? ""
-                let menuItem = NSMenuItem(title: "\(icon) \(item.name)\(suffix)",
-                                          action: #selector(openRecent(_:)), keyEquivalent: "")
-                menuItem.target = self
-                menuItem.representedObject = item.link
-                menu.addItem(menuItem)
-            }
+            let newGames = recent.filter { $0.isNew }
+            let updates = recent.filter { !$0.isNew }
+            addRecentGroup("Neue Games", items: newGames, icon: "🎮", to: menu)
+            if !newGames.isEmpty && !updates.isEmpty { menu.addItem(.separator()) }
+            addRecentGroup("Updates", items: updates, icon: "🔄", to: menu)
         }
 
         menu.addItem(.separator())
@@ -130,6 +125,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         item.isEnabled = false
         menu.addItem(item)
+    }
+
+    private func addRecentGroup(_ title: String, items: [RecentItem], icon: String, to menu: NSMenu) {
+        guard !items.isEmpty else { return }
+        addDisabled(title, to: menu)
+        for item in items.prefix(10) {
+            let suffix = item.platform.map { " (\($0))" } ?? ""
+            let menuItem = NSMenuItem(title: "\(icon) \(item.name)\(suffix)",
+                                      action: #selector(openRecent(_:)), keyEquivalent: "")
+            menuItem.target = self
+            menuItem.representedObject = item.link
+            menu.addItem(menuItem)
+        }
     }
 
     private func intervalMenuItem() -> NSMenuItem {
