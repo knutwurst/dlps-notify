@@ -1,0 +1,22 @@
+DLPS Notify — Installation
+==========================
+
+1. Right-click (or Control-click) "Install.command" and choose "Open".
+2. In the dialog, click "Open" — this is needed once because the app is not
+   notarized by Apple. It is safe.
+3. DLPS Notify installs into your Applications folder and appears in the menu
+   bar as a game-controller icon (top-right).
+
+That's it. The app checks dlpsgame.com on an interval and notifies you when a
+game is added or updated. From the menu bar icon you can:
+
+  • see the most recent games / updates (click to open the page),
+  • choose which platforms to be notified about (PS2 / PS3 / PS4 / PS5 / PSN),
+  • set the check interval (15 / 30 / 60 minutes),
+  • start it automatically at login.
+
+First time only: if no banners appear, open System Settings → Notifications,
+find "terminal-notifier" and turn notifications on. DLPS Notify uses it to
+deliver banners.
+
+Source & updates: https://github.com/knutwurst/dlps-notify
