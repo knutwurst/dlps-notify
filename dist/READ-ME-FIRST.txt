@@ -7,8 +7,8 @@ DLPS Notify — Installation
 3. DLPS Notify installs into your Applications folder and appears in the menu
    bar as a game-controller icon (top-right).
 
-That's it. The app checks dlpsgame.com on an interval and notifies you when a
-game is added or updated. From the menu bar icon you can:
+That's it. The app checks the site on an interval and notifies you when an entry
+is added or updated. From the menu bar icon you can:
 
   • see the most recent games / updates (click to open the page),
   • choose which platforms to be notified about (PS2 / PS3 / PS4 / PS5 / PSN),
