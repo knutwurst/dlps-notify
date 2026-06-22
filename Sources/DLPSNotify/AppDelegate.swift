@@ -131,9 +131,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard !items.isEmpty else { return }
         addDisabled(title, to: menu)
         for item in items.prefix(10) {
-            let platform = item.platform.map { " (\($0))" } ?? ""
-            let when = RecentDate.display(item.modified).map { "  ·  \($0)" } ?? ""
-            let menuItem = NSMenuItem(title: "\(icon) \(item.name)\(platform)\(when)",
+            var meta: [String] = []
+            if let platform = item.platform { meta.append(platform) }
+            if let when = RecentDate.display(item.modified) { meta.append(when) }
+            let suffix = meta.isEmpty ? "" : " (\(meta.joined(separator: " · ")))"
+            let menuItem = NSMenuItem(title: "\(icon) \(item.name)\(suffix)",
                                       action: #selector(openRecent(_:)), keyEquivalent: "")
             menuItem.target = self
             menuItem.representedObject = item.link
