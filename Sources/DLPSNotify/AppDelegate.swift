@@ -65,11 +65,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let lastCheck {
             let formatter = DateFormatter()
             formatter.dateFormat = "HH:mm"
-            parts.append("Letzter Check \(formatter.string(from: lastCheck))")
+            parts.append(L10n.t(.statusLastCheck, formatter.string(from: lastCheck)))
         } else {
-            parts.append("Noch nicht geprüft")
+            parts.append(L10n.t(.statusNotChecked))
         }
-        if lastError != nil { parts.append("⚠️ Fehler") }
+        if lastError != nil { parts.append(L10n.t(.statusError)) }
         return parts.joined(separator: " · ")
     }
 
@@ -81,18 +81,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
 
         if recent.isEmpty {
-            addDisabled("Noch keine neuen Games erfasst", to: menu)
+            addDisabled(L10n.t(.noEntriesYet), to: menu)
         } else {
             let newGames = recent.filter { $0.isNew }
             let updates = recent.filter { !$0.isNew }
-            addRecentGroup("Neue Games", items: newGames, icon: "🎮", to: menu)
+            addRecentGroup(L10n.t(.sectionNewGames), items: newGames, icon: "🎮", to: menu)
             if !newGames.isEmpty && !updates.isEmpty { menu.addItem(.separator()) }
-            addRecentGroup("Updates", items: updates, icon: "🔄", to: menu)
+            addRecentGroup(L10n.t(.sectionUpdates), items: updates, icon: "🔄", to: menu)
         }
 
         menu.addItem(.separator())
 
-        let checkNow = NSMenuItem(title: isChecking ? "Prüfe …" : "Jetzt prüfen",
+        let checkNow = NSMenuItem(title: isChecking ? L10n.t(.checking) : L10n.t(.checkNow),
                                   action: isChecking ? nil : #selector(checkNowAction),
                                   keyEquivalent: "r")
         checkNow.target = self
@@ -100,21 +100,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(intervalMenuItem())
         menu.addItem(platformsMenuItem())
+        menu.addItem(languageMenuItem())
 
-        let login = NSMenuItem(title: "Bei Anmeldung starten",
+        let login = NSMenuItem(title: L10n.t(.launchAtLogin),
                                action: #selector(toggleLoginAction), keyEquivalent: "")
         login.target = self
         login.state = loginEnabled() ? .on : .off
         menu.addItem(login)
 
-        let openSite = NSMenuItem(title: "DLPS-Seite öffnen",
+        let openSite = NSMenuItem(title: L10n.t(.openSite),
                                   action: #selector(openSiteAction), keyEquivalent: "")
         openSite.target = self
         menu.addItem(openSite)
 
         menu.addItem(.separator())
 
-        let quit = NSMenuItem(title: "Beenden", action: #selector(quitAction), keyEquivalent: "q")
+        let quit = NSMenuItem(title: L10n.t(.quit), action: #selector(quitAction), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
 
@@ -144,10 +145,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func intervalMenuItem() -> NSMenuItem {
-        let item = NSMenuItem(title: "Intervall", action: nil, keyEquivalent: "")
+        let item = NSMenuItem(title: L10n.t(.interval), action: nil, keyEquivalent: "")
         let submenu = NSMenu()
         for minutes in [15, 30, 60] {
-            let entry = NSMenuItem(title: "\(minutes) Minuten",
+            let entry = NSMenuItem(title: L10n.t(.minutes, minutes),
                                    action: #selector(setIntervalAction(_:)), keyEquivalent: "")
             entry.target = self
             entry.representedObject = minutes
@@ -159,7 +160,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func platformsMenuItem() -> NSMenuItem {
-        let item = NSMenuItem(title: "Plattformen", action: nil, keyEquivalent: "")
+        let item = NSMenuItem(title: L10n.t(.platforms), action: nil, keyEquivalent: "")
         let submenu = NSMenu()
         let selected = selectedPlatformKeys
         for platform in Platforms.all {
@@ -168,6 +169,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             entry.target = self
             entry.representedObject = platform.key
             entry.state = selected.contains(platform.key) ? .on : .off
+            submenu.addItem(entry)
+        }
+        item.submenu = submenu
+        return item
+    }
+
+    private func languageMenuItem() -> NSMenuItem {
+        let item = NSMenuItem(title: L10n.t(.language), action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+        let current = L10n.preference
+        let options: [(code: String, title: String)] = [
+            ("system", L10n.t(.languageSystem)),
+            ("en", "English"),
+            ("de", "Deutsch"),
+        ]
+        for option in options {
+            let entry = NSMenuItem(title: option.title,
+                                   action: #selector(setLanguageAction(_:)), keyEquivalent: "")
+            entry.target = self
+            entry.representedObject = option.code
+            entry.state = (option.code == current) ? .on : .off
             submenu.addItem(entry)
         }
         item.submenu = submenu
@@ -268,6 +290,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if selected.isEmpty { selected = Platforms.allKeys }
         defaults.set(Array(selected), forKey: platformsKey)
         rebuildMenu()
+    }
+
+    @objc private func setLanguageAction(_ sender: NSMenuItem) {
+        if let code = sender.representedObject as? String {
+            defaults.set(code, forKey: L10n.preferenceKey)
+            rebuildMenu()
+        }
     }
 
     @objc private func openSiteAction() {
