@@ -81,6 +81,23 @@ public final class APIClient {
         return all
     }
 
+    /// The rendered HTML content of a single post (used to detect what an update
+    /// changed). Returns "" if the post has no content.
+    public func fetchContent(postID: Int) async throws -> String {
+        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
+        components.path = "/wp-json/wp/v2/posts/\(postID)"
+        components.queryItems = [URLQueryItem(name: "_fields", value: "content")]
+        let (data, response) = try await session.data(from: components.url!)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw APIError("content HTTP \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+        }
+        struct Envelope: Decodable {
+            struct Content: Decodable { let rendered: String }
+            let content: Content
+        }
+        return (try? JSONDecoder().decode(Envelope.self, from: data))?.content.rendered ?? ""
+    }
+
     private func buildURL(page: Int, query: [URLQueryItem]) -> URL {
         var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
         components.path = "/wp-json/wp/v2/posts"

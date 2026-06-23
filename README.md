@@ -11,6 +11,8 @@ entry is added or updated. Click a notification to open its page.
 
 - Polls on an interval (default every 30 minutes) and shows a notification for each
   **new entry** and each **update** to an existing one.
+- For updates, shows what was added when it can tell (e.g. a newly added region or
+  release group, like `+ EUR (exFAT)`) — best-effort, falls back to a plain update.
 - Lets you pick which platforms you care about — **PS2 / PS3 / PS4 / PS5 / PSN**.
 - Keeps a list of the most recent entries in the menu; click one to open its page.
 - Available in **13 languages** — English (default), German, French, Spanish, Italian, Portuguese,

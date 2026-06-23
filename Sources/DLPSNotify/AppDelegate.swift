@@ -38,6 +38,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             FileHandle.standardOutput.write(Data(L10n.debugDump().utf8))
             exit(0)
         }
+        if let index = CommandLine.arguments.firstIndex(of: "--entries"),
+           index + 1 < CommandLine.arguments.count,
+           let id = Int(CommandLine.arguments[index + 1]) {
+            Task {
+                var out = ""
+                do {
+                    let html = try await api.fetchContent(postID: id)
+                    let entries = UpdateDetails.entries(fromHTML: html)
+                    out += "entries for \(id): \(entries)\n"
+                    if !entries.isEmpty {
+                        let summary = UpdateDetails.summarize(old: Array(entries.dropLast()), new: entries)
+                        out += "demo summary (last entry as new): \(summary ?? "‹none›")\n"
+                    }
+                } catch {
+                    out += "fetchContent error: \(error.localizedDescription)\n"
+                }
+                FileHandle.standardOutput.write(Data(out.utf8))
+                exit(0)
+            }
+            return
+        }
         Log.reset()
         recent = RecentStore.load()
         setupStatusItem()
@@ -140,7 +161,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if let platform = item.platform { meta.append(platform) }
             if let when = RecentDate.display(item.modified) { meta.append(when) }
             let suffix = meta.isEmpty ? "" : " (\(meta.joined(separator: " · ")))"
-            let menuItem = NSMenuItem(title: "\(icon) \(item.name)\(suffix)",
+            let extra = item.detail.map { " — \($0)" } ?? ""
+            let menuItem = NSMenuItem(title: "\(icon) \(item.name)\(suffix)\(extra)",
                                       action: #selector(openRecent(_:)), keyEquivalent: "")
             menuItem.target = self
             menuItem.representedObject = item.link
@@ -220,9 +242,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     : try await self.api.fetchChanges(modifiedAfter: self.store.state.lastModified)
                 let result = ChangeDetector.detect(state: self.store.state,
                                                    fetched: fetched, seeding: firstRun)
+                var details: [Int: String] = [:]
+                if !firstRun {
+                    let selected = self.selectedPlatformKeys
+                    let visible = result.events.filter {
+                        Platforms.matches(categories: $0.post.categories, selectedKeys: selected)
+                    }
+                    details = await self.computeDetails(for: visible)
+                }
                 await MainActor.run {
                     self.applyResult(events: result.events, newState: result.state,
-                                     firstRun: firstRun, fetchedCount: fetched.count)
+                                     firstRun: firstRun, fetchedCount: fetched.count, details: details)
                 }
             } catch {
                 await MainActor.run {
@@ -237,7 +267,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func applyResult(events: [GameEvent], newState: DetectorState,
-                             firstRun: Bool, fetchedCount: Int) {
+                             firstRun: Bool, fetchedCount: Int, details: [Int: String]) {
         // Advance state for ALL changes (dedup), regardless of platform filter.
         store.update(newState)
         lastError = nil
@@ -254,13 +284,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             log("\(events.count) change(s), \(visible.count) after platform filter")
             for event in visible {
-                Notifier.post(event: event)
-                recent.insert(RecentItem(event: event), at: 0)
+                let detail = details[event.post.id]
+                Notifier.post(event: event, detail: detail)
+                recent.insert(RecentItem(event: event, detail: detail), at: 0)
             }
             if recent.count > 30 { recent.removeLast(recent.count - 30) }
             RecentStore.save(recent)
         }
         rebuildMenu()
+    }
+
+    /// For the given (already platform-filtered) events, fetch each post's content,
+    /// diff its download entries against the stored snapshot, and return a "what
+    /// changed" summary per post id (updates only). Also refreshes the snapshots.
+    /// Bounded by `maxFetches` so a backlog can't trigger a flood of requests.
+    private func computeDetails(for events: [GameEvent]) async -> [Int: String] {
+        guard !events.isEmpty else { return [:] }
+        var signatures = SignatureStore.load()
+        var details: [Int: String] = [:]
+        let maxFetches = 12
+        var fetches = 0
+        for event in events {
+            guard fetches < maxFetches else { break }
+            fetches += 1
+            guard let html = try? await api.fetchContent(postID: event.post.id) else { continue }
+            let entries = UpdateDetails.entries(fromHTML: html)
+            let key = String(event.post.id)
+            let previous = signatures[key]
+            signatures[key] = entries
+            if !event.isNew, let previous,
+               let summary = UpdateDetails.summarize(old: previous, new: entries) {
+                details[event.post.id] = summary
+            }
+        }
+        SignatureStore.save(signatures)
+        return details
     }
 
     // MARK: Actions

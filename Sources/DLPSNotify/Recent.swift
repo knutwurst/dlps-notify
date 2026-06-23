@@ -10,16 +10,18 @@ struct RecentItem: Codable, Equatable {
     let isNew: Bool
     let platform: String?
     /// API timestamp of the change/addition ("yyyy-MM-dd'T'HH:mm:ss").
-    /// Optional so older persisted entries (without it) still decode.
     let modified: String?
+    /// For updates: a short "what changed" summary, e.g. "+ USA (@DUPLEX)". Optional.
+    let detail: String?
 
-    init(event: GameEvent) {
+    init(event: GameEvent, detail: String? = nil) {
         id = event.post.id
         name = event.post.name
         link = event.post.link
         isNew = event.isNew
         platform = event.post.platforms.first?.name
         modified = event.post.modified
+        self.detail = detail
     }
 }
 
