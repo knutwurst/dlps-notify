@@ -13,7 +13,9 @@ entry is added or updated. Click a notification to open its page.
   **new entry** and each **update** to an existing one.
 - Lets you pick which platforms you care about — **PS2 / PS3 / PS4 / PS5 / PSN**.
 - Keeps a list of the most recent entries in the menu; click one to open its page.
-- Available in **English** (default) and **German** — switch in the menu (or follow the system language).
+- Available in **13 languages** — English (default), German, French, Spanish, Italian, Portuguese,
+  Dutch, Polish, Russian, Turkish, Japanese, Simplified Chinese, Korean. Switch in the menu, or follow
+  the system language.
 - Optional launch-at-login.
 
 On the first run it silently records the current entries — no flood of notifications —

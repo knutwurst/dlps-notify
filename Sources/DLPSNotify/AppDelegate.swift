@@ -34,6 +34,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: Lifecycle
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if CommandLine.arguments.contains("--dump-langs") {
+            FileHandle.standardOutput.write(Data(L10n.debugDump().utf8))
+            exit(0)
+        }
         Log.reset()
         recent = RecentStore.load()
         setupStatusItem()
@@ -179,12 +183,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let item = NSMenuItem(title: L10n.t(.language), action: nil, keyEquivalent: "")
         let submenu = NSMenu()
         let current = L10n.preference
-        let options: [(code: String, title: String)] = [
-            ("system", L10n.t(.languageSystem)),
-            ("en", "English"),
-            ("de", "Deutsch"),
-        ]
-        for option in options {
+        for option in L10n.menuOptions {
             let entry = NSMenuItem(title: option.title,
                                    action: #selector(setLanguageAction(_:)), keyEquivalent: "")
             entry.target = self
