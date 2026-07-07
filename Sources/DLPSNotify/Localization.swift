@@ -77,6 +77,9 @@ enum L10n {
         case sectionNewGames, sectionUpdates, noEntriesYet
         case notifNewGame, notifUpdate, notifActive, notifActiveBody
         case notifSelftest, notifSelftestBody
+        // History window
+        case history, colPlatform, colTitle, colWhen, colDetails
+        case filterAll, search, entryCount, historyEmpty
     }
 
     /// Used by `--dump-langs` to verify every table renders.
@@ -86,8 +89,8 @@ enum L10n {
             let table = tables[lang] ?? englishTable
             func value(_ key: Key) -> String { table[key] ?? "‹missing›" }
             out += "[\(lang.rawValue)] \(lang.nativeName): "
-                + "\(value(.checkNow)) | \(value(.notifNewGame)) | \(value(.notifUpdate)) | "
-                + "\(value(.platforms)) | \(value(.quit)) | \(value(.notifSelftestBody))\n"
+                + "\(value(.checkNow)) | \(value(.notifNewGame)) | \(value(.history)) | "
+                + "\(value(.colTitle)) | \(value(.quit)) | \(value(.historyEmpty))\n"
         }
         return out
     }
@@ -103,6 +106,9 @@ enum L10n {
         .notifNewGame: "🎮 New game", .notifUpdate: "🔄 Update",
         .notifActive: "Active", .notifActiveBody: "I'll let you know about new and updated games.",
         .notifSelftest: "Self-test", .notifSelftestBody: "Notifications are working ✅",
+        .history: "History", .colPlatform: "Platform", .colTitle: "Title",
+        .colWhen: "When", .colDetails: "Details", .filterAll: "All",
+        .search: "Search", .entryCount: "%d entries", .historyEmpty: "No history yet",
     ]
 
     private static let germanTable: [Key: String] = [
@@ -116,6 +122,9 @@ enum L10n {
         .notifNewGame: "🎮 Neues Game", .notifUpdate: "🔄 Update",
         .notifActive: "Aktiv", .notifActiveBody: "Ich melde mich bei neuen Games und Updates.",
         .notifSelftest: "Selbsttest", .notifSelftestBody: "Benachrichtigungen funktionieren ✅",
+        .history: "Verlauf", .colPlatform: "Plattform", .colTitle: "Titel",
+        .colWhen: "Wann", .colDetails: "Details", .filterAll: "Alle",
+        .search: "Suchen", .entryCount: "%d Einträge", .historyEmpty: "Noch kein Verlauf",
     ]
 
     private static let frenchTable: [Key: String] = [
@@ -129,6 +138,9 @@ enum L10n {
         .notifNewGame: "🎮 Nouveau jeu", .notifUpdate: "🔄 Mise à jour",
         .notifActive: "Actif", .notifActiveBody: "Je vous préviens des jeux nouveaux et mis à jour.",
         .notifSelftest: "Auto-test", .notifSelftestBody: "Les notifications fonctionnent ✅",
+        .history: "Historique", .colPlatform: "Plateforme", .colTitle: "Titre",
+        .colWhen: "Quand", .colDetails: "Détails", .filterAll: "Tout",
+        .search: "Rechercher", .entryCount: "%d entrées", .historyEmpty: "Aucun historique",
     ]
 
     private static let spanishTable: [Key: String] = [
@@ -142,6 +154,9 @@ enum L10n {
         .notifNewGame: "🎮 Nuevo juego", .notifUpdate: "🔄 Actualización",
         .notifActive: "Activo", .notifActiveBody: "Te avisaré de juegos nuevos y actualizados.",
         .notifSelftest: "Autoprueba", .notifSelftestBody: "Las notificaciones funcionan ✅",
+        .history: "Historial", .colPlatform: "Plataforma", .colTitle: "Título",
+        .colWhen: "Cuándo", .colDetails: "Detalles", .filterAll: "Todo",
+        .search: "Buscar", .entryCount: "%d entradas", .historyEmpty: "Sin historial",
     ]
 
     private static let italianTable: [Key: String] = [
@@ -155,6 +170,9 @@ enum L10n {
         .notifNewGame: "🎮 Nuovo gioco", .notifUpdate: "🔄 Aggiornamento",
         .notifActive: "Attivo", .notifActiveBody: "Ti avviso quando ci sono giochi nuovi o aggiornati.",
         .notifSelftest: "Autotest", .notifSelftestBody: "Le notifiche funzionano ✅",
+        .history: "Cronologia", .colPlatform: "Piattaforma", .colTitle: "Titolo",
+        .colWhen: "Quando", .colDetails: "Dettagli", .filterAll: "Tutti",
+        .search: "Cerca", .entryCount: "%d voci", .historyEmpty: "Nessuna cronologia",
     ]
 
     private static let portugueseTable: [Key: String] = [
@@ -168,6 +186,9 @@ enum L10n {
         .notifNewGame: "🎮 Novo jogo", .notifUpdate: "🔄 Atualização",
         .notifActive: "Ativo", .notifActiveBody: "Eu aviso sobre jogos novos e atualizados.",
         .notifSelftest: "Autoteste", .notifSelftestBody: "As notificações estão funcionando ✅",
+        .history: "Histórico", .colPlatform: "Plataforma", .colTitle: "Título",
+        .colWhen: "Quando", .colDetails: "Detalhes", .filterAll: "Todos",
+        .search: "Buscar", .entryCount: "%d entradas", .historyEmpty: "Sem histórico",
     ]
 
     private static let dutchTable: [Key: String] = [
@@ -181,6 +202,9 @@ enum L10n {
         .notifNewGame: "🎮 Nieuwe game", .notifUpdate: "🔄 Update",
         .notifActive: "Actief", .notifActiveBody: "Ik laat je weten over nieuwe en bijgewerkte games.",
         .notifSelftest: "Zelftest", .notifSelftestBody: "Meldingen werken ✅",
+        .history: "Geschiedenis", .colPlatform: "Platform", .colTitle: "Titel",
+        .colWhen: "Wanneer", .colDetails: "Details", .filterAll: "Alle",
+        .search: "Zoeken", .entryCount: "%d items", .historyEmpty: "Nog geen geschiedenis",
     ]
 
     private static let polishTable: [Key: String] = [
@@ -194,6 +218,9 @@ enum L10n {
         .notifNewGame: "🎮 Nowa gra", .notifUpdate: "🔄 Aktualizacja",
         .notifActive: "Aktywne", .notifActiveBody: "Powiadomię Cię o nowych i zaktualizowanych grach.",
         .notifSelftest: "Autotest", .notifSelftestBody: "Powiadomienia działają ✅",
+        .history: "Historia", .colPlatform: "Platforma", .colTitle: "Tytuł",
+        .colWhen: "Kiedy", .colDetails: "Szczegóły", .filterAll: "Wszystko",
+        .search: "Szukaj", .entryCount: "%d wpisów", .historyEmpty: "Brak historii",
     ]
 
     private static let russianTable: [Key: String] = [
@@ -207,6 +234,9 @@ enum L10n {
         .notifNewGame: "🎮 Новая игра", .notifUpdate: "🔄 Обновление",
         .notifActive: "Активно", .notifActiveBody: "Сообщу о новых и обновлённых играх.",
         .notifSelftest: "Самопроверка", .notifSelftestBody: "Уведомления работают ✅",
+        .history: "История", .colPlatform: "Платформа", .colTitle: "Название",
+        .colWhen: "Когда", .colDetails: "Детали", .filterAll: "Все",
+        .search: "Поиск", .entryCount: "%d записей", .historyEmpty: "История пуста",
     ]
 
     private static let turkishTable: [Key: String] = [
@@ -220,6 +250,9 @@ enum L10n {
         .notifNewGame: "🎮 Yeni oyun", .notifUpdate: "🔄 Güncelleme",
         .notifActive: "Etkin", .notifActiveBody: "Yeni ve güncellenen oyunları bildiririm.",
         .notifSelftest: "Otomatik test", .notifSelftestBody: "Bildirimler çalışıyor ✅",
+        .history: "Geçmiş", .colPlatform: "Platform", .colTitle: "Başlık",
+        .colWhen: "Ne zaman", .colDetails: "Ayrıntılar", .filterAll: "Tümü",
+        .search: "Ara", .entryCount: "%d kayıt", .historyEmpty: "Henüz geçmiş yok",
     ]
 
     private static let japaneseTable: [Key: String] = [
@@ -233,6 +266,9 @@ enum L10n {
         .notifNewGame: "🎮 新しいゲーム", .notifUpdate: "🔄 アップデート",
         .notifActive: "起動中", .notifActiveBody: "新しいゲームや更新をお知らせします。",
         .notifSelftest: "セルフテスト", .notifSelftestBody: "通知は正常に動作しています ✅",
+        .history: "履歴", .colPlatform: "プラットフォーム", .colTitle: "タイトル",
+        .colWhen: "日時", .colDetails: "詳細", .filterAll: "すべて",
+        .search: "検索", .entryCount: "%d件", .historyEmpty: "履歴はまだありません",
     ]
 
     private static let chineseTable: [Key: String] = [
@@ -246,6 +282,9 @@ enum L10n {
         .notifNewGame: "🎮 新游戏", .notifUpdate: "🔄 更新",
         .notifActive: "已启用", .notifActiveBody: "有新游戏或更新时我会通知你。",
         .notifSelftest: "自检", .notifSelftestBody: "通知正常工作 ✅",
+        .history: "历史", .colPlatform: "平台", .colTitle: "标题",
+        .colWhen: "时间", .colDetails: "详情", .filterAll: "全部",
+        .search: "搜索", .entryCount: "%d 条", .historyEmpty: "暂无历史",
     ]
 
     private static let koreanTable: [Key: String] = [
@@ -259,6 +298,9 @@ enum L10n {
         .notifNewGame: "🎮 새 게임", .notifUpdate: "🔄 업데이트",
         .notifActive: "실행 중", .notifActiveBody: "새 게임과 업데이트를 알려드릴게요.",
         .notifSelftest: "자체 테스트", .notifSelftestBody: "알림이 작동합니다 ✅",
+        .history: "기록", .colPlatform: "플랫폼", .colTitle: "제목",
+        .colWhen: "시간", .colDetails: "세부 정보", .filterAll: "전체",
+        .search: "검색", .entryCount: "%d개", .historyEmpty: "기록 없음",
     ]
 
     private static let tables: [Language: [Key: String]] = [

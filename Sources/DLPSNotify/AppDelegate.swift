@@ -1,8 +1,9 @@
 import AppKit
+import SwiftUI
 import ServiceManagement
 import DLPSNotifyCore
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem!
     private let store = GameStore()
     private let api = APIClient()
@@ -11,7 +12,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastCheck: Date?
     private var lastError: String?
     private var isChecking = false
-    private var recent: [RecentItem] = []
+    private let history = HistoryModel()
+    private var historyWindow: NSWindow?
 
     private let defaults = UserDefaults.standard
     private let intervalKey = "checkIntervalMinutes"
@@ -59,8 +61,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return
         }
+        if CommandLine.arguments.contains("--test-history-render") {
+            // Render the history view offscreen (no visible window) as a crash smoke test.
+            let view = NSHostingView(rootView: HistoryView(model: history))
+            view.frame = NSRect(x: 0, y: 0, width: 720, height: 460)
+            view.layoutSubtreeIfNeeded()
+            _ = view.fittingSize
+            FileHandle.standardOutput.write(Data("history render ok: \(history.entries.count) entries\n".utf8))
+            exit(0)
+        }
+        if CommandLine.arguments.contains("--show-history") {
+            showHistoryAction()
+            return
+        }
         Log.reset()
-        recent = RecentStore.load()
         setupStatusItem()
         rebuildMenu()
 
@@ -105,11 +119,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         addDisabled(statusText(), to: menu)
         menu.addItem(.separator())
 
-        if recent.isEmpty {
+        let entries = history.entries
+        if entries.isEmpty {
             addDisabled(L10n.t(.noEntriesYet), to: menu)
         } else {
-            let newGames = recent.filter { $0.isNew }
-            let updates = recent.filter { !$0.isNew }
+            let newGames = entries.filter { $0.isNew }
+            let updates = entries.filter { !$0.isNew }
             addRecentGroup(L10n.t(.sectionNewGames), items: newGames, icon: "🎮", to: menu)
             if !newGames.isEmpty && !updates.isEmpty { menu.addItem(.separator()) }
             addRecentGroup(L10n.t(.sectionUpdates), items: updates, icon: "🔄", to: menu)
@@ -122,6 +137,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                   keyEquivalent: "r")
         checkNow.target = self
         menu.addItem(checkNow)
+
+        let historyItem = NSMenuItem(title: L10n.t(.history) + " …",
+                                     action: #selector(showHistoryAction), keyEquivalent: "l")
+        historyItem.target = self
+        menu.addItem(historyItem)
 
         menu.addItem(intervalMenuItem())
         menu.addItem(platformsMenuItem())
@@ -153,7 +173,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(item)
     }
 
-    private func addRecentGroup(_ title: String, items: [RecentItem], icon: String, to menu: NSMenu) {
+    private func addRecentGroup(_ title: String, items: [HistoryEntry], icon: String, to menu: NSMenu) {
         guard !items.isEmpty else { return }
         addDisabled(title, to: menu)
         for item in items.prefix(10) {
@@ -242,8 +262,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     : try await self.api.fetchChanges(modifiedAfter: self.store.state.lastModified)
                 let result = ChangeDetector.detect(state: self.store.state,
                                                    fetched: fetched, seeding: firstRun)
-                var details: [Int: String] = [:]
-                if !firstRun {
+                let details: [Int: String]
+                if firstRun {
+                    details = [:]
+                } else {
                     let selected = self.selectedPlatformKeys
                     let visible = result.events.filter {
                         Platforms.matches(categories: $0.post.categories, selectedKeys: selected)
@@ -284,12 +306,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             log("\(events.count) change(s), \(visible.count) after platform filter")
             for event in visible {
-                let detail = details[event.post.id]
-                Notifier.post(event: event, detail: detail)
-                recent.insert(RecentItem(event: event, detail: detail), at: 0)
+                Notifier.post(event: event, detail: details[event.post.id])
             }
-            if recent.count > 30 { recent.removeLast(recent.count - 30) }
-            RecentStore.save(recent)
+            let newEntries = visible.reversed().map {
+                HistoryEntry(event: $0, detail: details[$0.post.id])
+            }
+            history.add(newEntries)
         }
         rebuildMenu()
     }
@@ -358,6 +380,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSiteAction() {
         if let url = URL(string: siteURL) { NSWorkspace.shared.open(url) }
+    }
+
+    @objc private func showHistoryAction() {
+        if historyWindow == nil {
+            let hosting = NSHostingController(rootView: HistoryView(model: history))
+            let window = NSWindow(contentViewController: hosting)
+            window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+            window.setContentSize(NSSize(width: 720, height: 460))
+            window.isReleasedWhenClosed = false
+            window.delegate = self
+            historyWindow = window
+        }
+        historyWindow?.title = "DLPS Notify — " + L10n.t(.history)
+        // Become a regular app while the window is open so it can take focus.
+        NSApp.setActivationPolicy(.regular)
+        historyWindow?.center()
+        historyWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        // Back to a menu-bar-only agent when the history window closes.
+        NSApp.setActivationPolicy(.accessory)
     }
 
     @objc private func quitAction() { NSApplication.shared.terminate(nil) }
