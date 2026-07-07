@@ -4,8 +4,10 @@ import SwiftUI
 /// new games and updates, with clickable links.
 struct HistoryView: View {
     @ObservedObject var model: HistoryModel
+    var onLoadMore: () async -> Void = {}
     @State private var search = ""
     @State private var filter = 0   // 0 = all, 1 = new games, 2 = updates
+    @State private var isLoading = false
 
     private var filtered: [HistoryEntry] {
         let query = search.trimmingCharacters(in: .whitespaces)
@@ -36,6 +38,15 @@ struct HistoryView: View {
 
                 Spacer()
                 Text(L10n.t(.entryCount, filtered.count)).foregroundColor(.secondary)
+                if isLoading {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Button {
+                        Task { isLoading = true; await onLoadMore(); isLoading = false }
+                    } label: {
+                        Label(L10n.t(.loadMore), systemImage: "arrow.down.circle")
+                    }
+                }
             }
             .padding(10)
 

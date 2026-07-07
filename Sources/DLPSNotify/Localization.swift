@@ -79,7 +79,7 @@ enum L10n {
         case notifSelftest, notifSelftestBody
         // History window
         case history, colPlatform, colTitle, colWhen, colDetails
-        case filterAll, search, entryCount, historyEmpty
+        case filterAll, search, entryCount, historyEmpty, loadMore
     }
 
     /// Used by `--dump-langs` to verify every table renders.
@@ -109,6 +109,7 @@ enum L10n {
         .history: "History", .colPlatform: "Platform", .colTitle: "Title",
         .colWhen: "When", .colDetails: "Details", .filterAll: "All",
         .search: "Search", .entryCount: "%d entries", .historyEmpty: "No history yet",
+        .loadMore: "Load more",
     ]
 
     private static let germanTable: [Key: String] = [
@@ -125,6 +126,7 @@ enum L10n {
         .history: "Verlauf", .colPlatform: "Plattform", .colTitle: "Titel",
         .colWhen: "Wann", .colDetails: "Details", .filterAll: "Alle",
         .search: "Suchen", .entryCount: "%d Einträge", .historyEmpty: "Noch kein Verlauf",
+        .loadMore: "Mehr laden",
     ]
 
     private static let frenchTable: [Key: String] = [
@@ -141,6 +143,7 @@ enum L10n {
         .history: "Historique", .colPlatform: "Plateforme", .colTitle: "Titre",
         .colWhen: "Quand", .colDetails: "Détails", .filterAll: "Tout",
         .search: "Rechercher", .entryCount: "%d entrées", .historyEmpty: "Aucun historique",
+        .loadMore: "Charger plus",
     ]
 
     private static let spanishTable: [Key: String] = [
@@ -157,6 +160,7 @@ enum L10n {
         .history: "Historial", .colPlatform: "Plataforma", .colTitle: "Título",
         .colWhen: "Cuándo", .colDetails: "Detalles", .filterAll: "Todo",
         .search: "Buscar", .entryCount: "%d entradas", .historyEmpty: "Sin historial",
+        .loadMore: "Cargar más",
     ]
 
     private static let italianTable: [Key: String] = [
@@ -173,6 +177,7 @@ enum L10n {
         .history: "Cronologia", .colPlatform: "Piattaforma", .colTitle: "Titolo",
         .colWhen: "Quando", .colDetails: "Dettagli", .filterAll: "Tutti",
         .search: "Cerca", .entryCount: "%d voci", .historyEmpty: "Nessuna cronologia",
+        .loadMore: "Carica altri",
     ]
 
     private static let portugueseTable: [Key: String] = [
@@ -189,6 +194,7 @@ enum L10n {
         .history: "Histórico", .colPlatform: "Plataforma", .colTitle: "Título",
         .colWhen: "Quando", .colDetails: "Detalhes", .filterAll: "Todos",
         .search: "Buscar", .entryCount: "%d entradas", .historyEmpty: "Sem histórico",
+        .loadMore: "Carregar mais",
     ]
 
     private static let dutchTable: [Key: String] = [
@@ -205,6 +211,7 @@ enum L10n {
         .history: "Geschiedenis", .colPlatform: "Platform", .colTitle: "Titel",
         .colWhen: "Wanneer", .colDetails: "Details", .filterAll: "Alle",
         .search: "Zoeken", .entryCount: "%d items", .historyEmpty: "Nog geen geschiedenis",
+        .loadMore: "Meer laden",
     ]
 
     private static let polishTable: [Key: String] = [
@@ -221,6 +228,7 @@ enum L10n {
         .history: "Historia", .colPlatform: "Platforma", .colTitle: "Tytuł",
         .colWhen: "Kiedy", .colDetails: "Szczegóły", .filterAll: "Wszystko",
         .search: "Szukaj", .entryCount: "%d wpisów", .historyEmpty: "Brak historii",
+        .loadMore: "Wczytaj więcej",
     ]
 
     private static let russianTable: [Key: String] = [
@@ -237,6 +245,7 @@ enum L10n {
         .history: "История", .colPlatform: "Платформа", .colTitle: "Название",
         .colWhen: "Когда", .colDetails: "Детали", .filterAll: "Все",
         .search: "Поиск", .entryCount: "%d записей", .historyEmpty: "История пуста",
+        .loadMore: "Загрузить ещё",
     ]
 
     private static let turkishTable: [Key: String] = [
@@ -253,6 +262,7 @@ enum L10n {
         .history: "Geçmiş", .colPlatform: "Platform", .colTitle: "Başlık",
         .colWhen: "Ne zaman", .colDetails: "Ayrıntılar", .filterAll: "Tümü",
         .search: "Ara", .entryCount: "%d kayıt", .historyEmpty: "Henüz geçmiş yok",
+        .loadMore: "Daha fazla yükle",
     ]
 
     private static let japaneseTable: [Key: String] = [
@@ -269,6 +279,7 @@ enum L10n {
         .history: "履歴", .colPlatform: "プラットフォーム", .colTitle: "タイトル",
         .colWhen: "日時", .colDetails: "詳細", .filterAll: "すべて",
         .search: "検索", .entryCount: "%d件", .historyEmpty: "履歴はまだありません",
+        .loadMore: "さらに読み込む",
     ]
 
     private static let chineseTable: [Key: String] = [
@@ -285,6 +296,7 @@ enum L10n {
         .history: "历史", .colPlatform: "平台", .colTitle: "标题",
         .colWhen: "时间", .colDetails: "详情", .filterAll: "全部",
         .search: "搜索", .entryCount: "%d 条", .historyEmpty: "暂无历史",
+        .loadMore: "加载更多",
     ]
 
     private static let koreanTable: [Key: String] = [
@@ -301,6 +313,7 @@ enum L10n {
         .history: "기록", .colPlatform: "플랫폼", .colTitle: "제목",
         .colWhen: "시간", .colDetails: "세부 정보", .filterAll: "전체",
         .search: "검색", .entryCount: "%d개", .historyEmpty: "기록 없음",
+        .loadMore: "더 불러오기",
     ]
 
     private static let tables: [Language: [Key: String]] = [

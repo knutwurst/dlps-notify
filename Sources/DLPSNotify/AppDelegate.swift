@@ -70,6 +70,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             FileHandle.standardOutput.write(Data("history render ok: \(history.entries.count) entries\n".utf8))
             exit(0)
         }
+        if CommandLine.arguments.contains("--backfill") {
+            setupStatusItem()
+            Task {
+                let added = await backfillHistory()
+                FileHandle.standardOutput.write(Data("backfill added \(added); history now \(history.entries.count)\n".utf8))
+                exit(0)
+            }
+            return
+        }
         if CommandLine.arguments.contains("--show-history") {
             showHistoryAction()
             return
@@ -343,6 +352,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         return details
     }
 
+    /// Backfill: fetch everything modified in the last `days` days and merge it into
+    /// history (platform-filtered; no per-entry "what changed" — there is no earlier
+    /// snapshot to diff a backfilled entry against). Returns how many were added.
+    @discardableResult
+    private func backfillHistory(days: Int = 7) async -> Int {
+        let watermark = DLPSDate.string(from: Date().addingTimeInterval(-Double(days) * 86_400))
+        guard let fetched = try? await api.fetchChanges(modifiedAfter: watermark) else { return 0 }
+        let selected = selectedPlatformKeys
+        let entries = fetched
+            .filter { Platforms.matches(categories: $0.categories, selectedKeys: selected) }
+            .map { HistoryEntry(event: ChangeDetector.classifyFirstSeen($0), detail: nil) }
+        return await MainActor.run {
+            let added = self.history.merge(entries)
+            self.rebuildMenu()
+            return added
+        }
+    }
+
     // MARK: Actions
 
     @objc private func checkNowAction() { runCheck(reason: "manual") }
@@ -384,7 +411,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     @objc private func showHistoryAction() {
         if historyWindow == nil {
-            let hosting = NSHostingController(rootView: HistoryView(model: history))
+            let hosting = NSHostingController(rootView: HistoryView(model: history, onLoadMore: { [weak self] in
+                _ = await self?.backfillHistory()
+            }))
             let window = NSWindow(contentViewController: hosting)
             window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
             window.setContentSize(NSSize(width: 720, height: 460))

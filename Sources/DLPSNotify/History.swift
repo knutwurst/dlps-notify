@@ -18,6 +18,8 @@ struct HistoryEntry: Codable, Identifiable, Equatable {
 
     /// Unique per event (a post can appear multiple times over its update history).
     var id: String { "\(postID)-\(modified ?? "")-\(Int(recordedAt.timeIntervalSince1970))" }
+    /// Identifies the same change regardless of when we recorded it (for dedup on backfill).
+    var dedupKey: String { "\(postID)|\(modified ?? "")" }
     var url: URL? { URL(string: link) }
 
     enum CodingKeys: String, CodingKey {
@@ -93,6 +95,25 @@ final class HistoryModel: ObservableObject {
         guard !newEntries.isEmpty else { return }
         entries.insert(contentsOf: newEntries, at: 0)
         HistoryStore.save(entries)
+    }
+
+    /// Merge backfilled entries (skip ones already present), sort newest-first, persist.
+    /// Returns how many were actually added.
+    @discardableResult
+    func merge(_ incoming: [HistoryEntry]) -> Int {
+        guard !incoming.isEmpty else { return 0 }
+        var keys = Set(entries.map(\.dedupKey))
+        var added = 0
+        var merged = entries
+        for entry in incoming where !keys.contains(entry.dedupKey) {
+            merged.append(entry)
+            keys.insert(entry.dedupKey)
+            added += 1
+        }
+        merged.sort { ($0.modified ?? "") > ($1.modified ?? "") }
+        entries = Array(merged.prefix(2000))
+        HistoryStore.save(entries)
+        return added
     }
 
     /// One-time migration of the old capped menu list (UserDefaults) into history.
