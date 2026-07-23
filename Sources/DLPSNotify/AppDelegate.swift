@@ -85,6 +85,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             return
         }
         Log.reset()
+        PlatformStyle.ensureIconsFolder()
         setupStatusItem()
         rebuildMenu()
 
@@ -124,7 +125,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
 
     private func showStatusMenu() {
-        if currentMenu == nil { rebuildMenu() }
+        rebuildMenu()   // rebuild each time so recent entries and platform icons are fresh
         guard let menu = currentMenu else { return }
         menu.delegate = self
         statusItem.menu = menu
@@ -195,6 +196,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         openSite.target = self
         menu.addItem(openSite)
 
+        let iconsItem = NSMenuItem(title: L10n.t(.platformIcons),
+                                   action: #selector(openPlatformIconsFolder), keyEquivalent: "")
+        iconsItem.target = self
+        menu.addItem(iconsItem)
+
         menu.addItem(.separator())
 
         let quit = NSMenuItem(title: L10n.t(.quit), action: #selector(quitAction), keyEquivalent: "q")
@@ -218,7 +224,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             let extra = item.detail.map { " — \($0)" } ?? ""
             let menuItem = NSMenuItem(title: "\(icon) \(item.name)\(when)\(extra)",
                                       action: #selector(openRecent(_:)), keyEquivalent: "")
-            if let platform = item.platform, let badge = PlatformStyle.menuBadge(forName: platform) {
+            if let platform = item.platform, let badge = PlatformStyle.menuImage(forName: platform) {
                 menuItem.image = badge
             }
             menuItem.target = self
@@ -435,6 +441,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
 
     @objc private func openSiteAction() {
         if let url = URL(string: siteURL) { NSWorkspace.shared.open(url) }
+    }
+
+    @objc private func openPlatformIconsFolder() {
+        PlatformStyle.ensureIconsFolder()
+        PlatformStyle.clearIconCache()   // pick up any files added since launch
+        NSWorkspace.shared.open(PlatformStyle.iconsFolderURL)
     }
 
     @objc private func showHistoryAction() {

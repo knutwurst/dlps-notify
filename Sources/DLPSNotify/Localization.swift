@@ -79,7 +79,7 @@ enum L10n {
         case notifSelftest, notifSelftestBody
         // History window
         case history, colPlatform, colTitle, colWhen, colDetails
-        case filterAll, search, entryCount, historyEmpty, loadMore
+        case filterAll, search, entryCount, historyEmpty, loadMore, platformIcons
     }
 
     /// Used by `--dump-langs` to verify every table renders.
@@ -109,7 +109,7 @@ enum L10n {
         .history: "History", .colPlatform: "Platform", .colTitle: "Title",
         .colWhen: "When", .colDetails: "Details", .filterAll: "All",
         .search: "Search", .entryCount: "%d entries", .historyEmpty: "No history yet",
-        .loadMore: "Load more",
+        .loadMore: "Load more", .platformIcons: "Platform icons…",
     ]
 
     private static let germanTable: [Key: String] = [
@@ -126,7 +126,7 @@ enum L10n {
         .history: "Verlauf", .colPlatform: "Plattform", .colTitle: "Titel",
         .colWhen: "Wann", .colDetails: "Details", .filterAll: "Alle",
         .search: "Suchen", .entryCount: "%d Einträge", .historyEmpty: "Noch kein Verlauf",
-        .loadMore: "Mehr laden",
+        .loadMore: "Mehr laden", .platformIcons: "Plattform-Icons…",
     ]
 
     private static let frenchTable: [Key: String] = [

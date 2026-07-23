@@ -25,6 +25,14 @@ entry is added or updated. Click a notification to open its page.
 On the first run it silently records the current entries — no flood of notifications —
 and only notifies on changes from then on.
 
+### Platform icons
+
+Platforms show as colour-coded badges by default. Want real platform logos instead? Drop your own
+image files named `ps5.png`, `ps4.png`, `ps3.png`, `ps2.png`, `psn.png` (png/pdf/jpg/tiff) into
+`~/Library/Application Support/DLPSNotify/platforms/` — the menu item *Platform icons…* opens that
+folder. They replace the badges in the menu and history. No logos are bundled with the app; you supply
+your own assets.
+
 ## How it works
 
 The site is a WordPress install behind Cloudflare. Instead of scraping HTML, the app reads its REST
