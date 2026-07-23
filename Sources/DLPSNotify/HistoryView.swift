@@ -72,9 +72,10 @@ struct HistoryView: View {
                                 Image(nsImage: icon).resizable().scaledToFit().frame(height: 16)
                             } else if PlatformStyle.isKnown(platform) {
                                 Text(platform)
-                                    .font(.system(size: 10, weight: .bold))
+                                    .font(.system(size: 10, weight: .heavy))
+                                    .kerning(0.4)
                                     .foregroundColor(.white)
-                                    .padding(.horizontal, 6)
+                                    .padding(.horizontal, 7)
                                     .padding(.vertical, 2)
                                     .background(PlatformStyle.color(forName: platform), in: Capsule())
                             } else {

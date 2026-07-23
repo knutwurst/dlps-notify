@@ -89,26 +89,40 @@ enum PlatformStyle {
         return out
     }
 
-    /// A small coloured pill (region code in white) — the fallback when no icon file exists.
+    /// A crisp capsule pill (region code in white) — the fallback when no icon file exists.
+    /// Rendered at 2× into a bitmap so it stays sharp on Retina.
     static func menuBadge(forName name: String) -> NSImage? {
         guard isKnown(name) else { return nil }
-        let size = NSSize(width: 34, height: 14)
-        let image = NSImage(size: size)
-        image.lockFocus()
-        let rect = NSRect(origin: .zero, size: size).insetBy(dx: 0.5, dy: 0.5)
-        NSBezierPath(roundedRect: rect, xRadius: 3.5, yRadius: 3.5).addClip()
-        nsColor(forName: name).setFill()
-        rect.fill()
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 9, weight: .bold),
+            .font: NSFont.systemFont(ofSize: 9, weight: .heavy),
             .foregroundColor: NSColor.white,
+            .kern: 0.4,
         ]
         let text = name as NSString
         let textSize = text.size(withAttributes: attributes)
-        text.draw(at: NSPoint(x: (size.width - textSize.width) / 2,
-                              y: (size.height - textSize.height) / 2 - 0.5),
+        let height: CGFloat = 14
+        let width = ceil(textSize.width) + 11
+        let scale: CGFloat = 2
+
+        guard let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: Int(width * scale), pixelsHigh: Int(height * scale),
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return nil }
+        rep.size = NSSize(width: width, height: height)
+
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        let rect = NSRect(x: 0, y: 0, width: width, height: height)
+        NSBezierPath(roundedRect: rect, xRadius: height / 2, yRadius: height / 2).addClip()
+        nsColor(forName: name).setFill()
+        rect.fill()
+        text.draw(at: NSPoint(x: (width - textSize.width) / 2,
+                              y: (height - textSize.height) / 2),
                   withAttributes: attributes)
-        image.unlockFocus()
+        NSGraphicsContext.restoreGraphicsState()
+
+        let image = NSImage(size: NSSize(width: width, height: height))
+        image.addRepresentation(rep)
         return image
     }
 }
