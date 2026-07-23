@@ -67,9 +67,18 @@ struct HistoryView: View {
                     .width(26)
 
                     TableColumn(L10n.t(.colPlatform)) { (entry: HistoryEntry) in
-                        Text(entry.platform ?? "—")
+                        if let platform = entry.platform, PlatformStyle.isKnown(platform) {
+                            Text(platform)
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(PlatformStyle.color(forName: platform), in: Capsule())
+                        } else {
+                            Text(entry.platform ?? "—").foregroundColor(.secondary)
+                        }
                     }
-                    .width(min: 48, ideal: 56, max: 80)
+                    .width(min: 52, ideal: 60, max: 84)
 
                     TableColumn(L10n.t(.colTitle)) { (entry: HistoryEntry) in
                         if let url = entry.url {

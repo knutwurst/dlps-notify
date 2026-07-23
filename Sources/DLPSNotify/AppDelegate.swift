@@ -3,7 +3,7 @@ import SwiftUI
 import ServiceManagement
 import DLPSNotifyCore
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private let store = GameStore()
     private let api = APIClient()
@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var isChecking = false
     private let history = HistoryModel()
     private var historyWindow: NSWindow?
+    private var currentMenu: NSMenu?
 
     private let defaults = UserDefaults.standard
     private let intervalKey = "checkIntervalMinutes"
@@ -105,7 +106,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             button.image = NSImage(systemSymbolName: "gamecontroller",
                                    accessibilityDescription: "DLPS Notify")
             button.image?.isTemplate = true
+            button.target = self
+            button.action = #selector(statusItemClicked)
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
+    }
+
+    @objc private func statusItemClicked() {
+        let event = NSApp.currentEvent
+        let isSecondary = event?.type == .rightMouseUp
+            || (event?.modifierFlags.contains(.control) ?? false)
+        if isSecondary {
+            showHistoryAction()   // right-click / control-click → straight to the history
+        } else {
+            showStatusMenu()
+        }
+    }
+
+    private func showStatusMenu() {
+        if currentMenu == nil { rebuildMenu() }
+        guard let menu = currentMenu else { return }
+        menu.delegate = self
+        statusItem.menu = menu
+        statusItem.button?.performClick(nil)
+    }
+
+    func menuDidClose(_ menu: NSMenu) {
+        // Detach so the next click reaches our handler (needed to catch right-clicks).
+        statusItem.menu = nil
     }
 
     private func statusText() -> String {
@@ -173,7 +201,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         quit.target = self
         menu.addItem(quit)
 
-        statusItem.menu = menu
+        currentMenu = menu
     }
 
     private func addDisabled(_ title: String, to menu: NSMenu) {
@@ -186,13 +214,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard !items.isEmpty else { return }
         addDisabled(title, to: menu)
         for item in items.prefix(10) {
-            var meta: [String] = []
-            if let platform = item.platform { meta.append(platform) }
-            if let when = RecentDate.display(item.modified) { meta.append(when) }
-            let suffix = meta.isEmpty ? "" : " (\(meta.joined(separator: " · ")))"
+            let when = RecentDate.display(item.modified).map { " (\($0))" } ?? ""
             let extra = item.detail.map { " — \($0)" } ?? ""
-            let menuItem = NSMenuItem(title: "\(icon) \(item.name)\(suffix)\(extra)",
+            let menuItem = NSMenuItem(title: "\(icon) \(item.name)\(when)\(extra)",
                                       action: #selector(openRecent(_:)), keyEquivalent: "")
+            if let platform = item.platform, let badge = PlatformStyle.menuBadge(forName: platform) {
+                menuItem.image = badge
+            }
             menuItem.target = self
             menuItem.representedObject = item.link
             menu.addItem(menuItem)

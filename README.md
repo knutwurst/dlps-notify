@@ -14,9 +14,9 @@ entry is added or updated. Click a notification to open its page.
 - For updates, shows what was added when it can tell (e.g. a newly added region or
   release group, like `+ EUR (exFAT)`) — best-effort, falls back to a plain update.
 - Lets you pick which platforms you care about — **PS2 / PS3 / PS4 / PS5 / PSN**.
-- Keeps a list of the most recent entries in the menu; click one to open its page.
-- A **History window** (menu → *History…*) shows a searchable, filterable table of every
-  recorded new game and update — platform, time, what changed, and a clickable link per row.
+- Keeps a list of the most recent entries in the menu, colour-coded by platform; click one to open its page.
+- A **History window** — menu → *History…*, or **right-click the menu bar icon** — with a searchable,
+  filterable table of every new game and update (platform, time, what changed, and a clickable link per row).
 - Available in **13 languages** — English (default), German, French, Spanish, Italian, Portuguese,
   Dutch, Polish, Russian, Turkish, Japanese, Simplified Chinese, Korean. Switch in the menu, or follow
   the system language.
