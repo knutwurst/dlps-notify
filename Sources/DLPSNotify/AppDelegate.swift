@@ -85,18 +85,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             return
         }
         if CommandLine.arguments.contains("--library-check") {
-            var owned = 0, notOwned = 0, unknown = 0, updates = 0
+            var byCode: [String: HistoryEntry] = [:], byName: [String: HistoryEntry] = [:]
             for entry in history.entries {
-                switch library.status(codes: entry.codes, name: entry.name, dlpsVersions: entry.dlpsVersions) {
-                case .unknown: unknown += 1
-                case .notOwned: notOwned += 1
-                case .owned: owned += 1
-                case .updateAvailable: owned += 1; updates += 1
-                }
+                if let codes = entry.codes { for c in codes where byCode[c] == nil { byCode[c] = entry } }
+                let key = LibraryIndex.normalize(entry.name)
+                if byName[key] == nil { byName[key] = entry }
             }
-            let msg = "library: \(library.count) games | history \(history.entries.count): "
-                + "owned \(owned) (version-updates \(updates)), not-owned \(notOwned), unknown \(unknown)\n"
-            FileHandle.standardOutput.write(Data(msg.utf8))
+            var seen = 0, updates = 0
+            for game in library.games {
+                guard let match = byCode[game.code] ?? byName[LibraryIndex.normalize(game.name)] else { continue }
+                seen += 1
+                var versions = match.dlpsVersions ?? []
+                if let detail = match.detail { versions += UpdateDetails.versionStrings(fromHTML: detail) }
+                if let mine = game.version,
+                   let dlps = versions.max(by: { VersionCompare.isNewer($1, than: $0) == true }),
+                   VersionCompare.isNewer(dlps, than: mine) == true { updates += 1 }
+            }
+            FileHandle.standardOutput.write(Data(
+                "library \(library.count) games: \(seen) seen on DLPS, \(updates) with a newer version\n".utf8))
             exit(0)
         }
         if CommandLine.arguments.contains("--show-history") {
