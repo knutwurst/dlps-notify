@@ -4,20 +4,52 @@ import SwiftUI
 /// new games and updates, with clickable links.
 struct HistoryView: View {
     @ObservedObject var model: HistoryModel
+    @ObservedObject var library: LibraryModel
     var onLoadMore: () async -> Void = {}
     @State private var search = ""
     @State private var filter = 0   // 0 = all, 1 = new games, 2 = updates
     @State private var isLoading = false
+    @State private var onlyMine = false
+
+    private func ownership(_ entry: HistoryEntry) -> OwnershipStatus {
+        library.status(codes: entry.codes, name: entry.name, dlpsVersions: entry.dlpsVersions)
+    }
 
     private var filtered: [HistoryEntry] {
         let query = search.trimmingCharacters(in: .whitespaces)
         return model.entries.filter { entry in
             let typeOK = filter == 0 || (filter == 1 && entry.isNew) || (filter == 2 && !entry.isNew)
             guard typeOK else { return false }
+            if onlyMine {
+                switch ownership(entry) {
+                case .owned, .updateAvailable: break
+                default: return false
+                }
+            }
             if query.isEmpty { return true }
             return entry.name.localizedCaseInsensitiveContains(query)
                 || (entry.platform ?? "").localizedCaseInsensitiveContains(query)
                 || (entry.detail ?? "").localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    @ViewBuilder
+    private func ownershipCell(_ entry: HistoryEntry) -> some View {
+        switch ownership(entry) {
+        case .unknown:
+            Text("")
+        case .notOwned:
+            Text("–").foregroundColor(.secondary)
+        case .owned(let version):
+            HStack(spacing: 3) {
+                Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+                if let version { Text("v\(version)").font(.caption).foregroundColor(.secondary) }
+            }
+        case .updateAvailable(let version):
+            HStack(spacing: 3) {
+                Image(systemName: "arrow.up.circle.fill").foregroundColor(.orange)
+                if let version { Text("v\(version)").font(.caption).foregroundColor(.secondary) }
+            }
         }
     }
 
@@ -35,6 +67,10 @@ struct HistoryView: View {
                 TextField(L10n.t(.search), text: $search)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 200)
+
+                if !library.index.isEmpty {
+                    Toggle(L10n.t(.filterOwned), isOn: $onlyMine).toggleStyle(.checkbox)
+                }
 
                 Spacer()
                 Text(L10n.t(.entryCount, filtered.count)).foregroundColor(.secondary)
@@ -86,6 +122,11 @@ struct HistoryView: View {
                         }
                     }
                     .width(min: 52, ideal: 60, max: 84)
+
+                    TableColumn(L10n.t(.colOwned)) { (entry: HistoryEntry) in
+                        ownershipCell(entry)
+                    }
+                    .width(min: 44, ideal: 70, max: 110)
 
                     TableColumn(L10n.t(.colTitle)) { (entry: HistoryEntry) in
                         if let url = entry.url {

@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import ServiceManagement
+import UniformTypeIdentifiers
 import DLPSNotifyCore
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuDelegate {
@@ -13,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     private var lastError: String?
     private var isChecking = false
     private let history = HistoryModel()
+    private let library = LibraryModel()
     private var historyWindow: NSWindow?
     private var currentMenu: NSMenu?
 
@@ -33,6 +35,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         }
         return Platforms.allKeys   // default: everything
     }
+
+    private var onlyOwnedNotifications: Bool { defaults.bool(forKey: "onlyOwnedNotifications") }
 
     // MARK: Lifecycle
 
@@ -64,7 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         }
         if CommandLine.arguments.contains("--test-history-render") {
             // Render the history view offscreen (no visible window) as a crash smoke test.
-            let view = NSHostingView(rootView: HistoryView(model: history))
+            let view = NSHostingView(rootView: HistoryView(model: history, library: library))
             view.frame = NSRect(x: 0, y: 0, width: 720, height: 460)
             view.layoutSubtreeIfNeeded()
             _ = view.fittingSize
@@ -79,6 +83,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
                 exit(0)
             }
             return
+        }
+        if CommandLine.arguments.contains("--library-check") {
+            var owned = 0, notOwned = 0, unknown = 0, updates = 0
+            for entry in history.entries {
+                switch library.status(codes: entry.codes, name: entry.name, dlpsVersions: entry.dlpsVersions) {
+                case .unknown: unknown += 1
+                case .notOwned: notOwned += 1
+                case .owned: owned += 1
+                case .updateAvailable: owned += 1; updates += 1
+                }
+            }
+            let msg = "library: \(library.count) games | history \(history.entries.count): "
+                + "owned \(owned) (version-updates \(updates)), not-owned \(notOwned), unknown \(unknown)\n"
+            FileHandle.standardOutput.write(Data(msg.utf8))
+            exit(0)
         }
         if CommandLine.arguments.contains("--show-history") {
             showHistoryAction()
@@ -184,6 +203,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         menu.addItem(intervalMenuItem())
         menu.addItem(platformsMenuItem())
         menu.addItem(languageMenuItem())
+        menu.addItem(libraryMenuItem())
 
         let login = NSMenuItem(title: L10n.t(.launchAtLogin),
                                action: #selector(toggleLoginAction), keyEquivalent: "")
@@ -280,6 +300,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         return item
     }
 
+    private func libraryMenuItem() -> NSMenuItem {
+        let item = NSMenuItem(title: L10n.t(.library), action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+
+        let status = NSMenuItem(
+            title: library.isConfigured ? L10n.t(.libraryCount, library.count) : L10n.t(.libraryNone),
+            action: nil, keyEquivalent: "")
+        status.isEnabled = false
+        submenu.addItem(status)
+
+        let choose = NSMenuItem(title: L10n.t(.libraryChoose),
+                                action: #selector(pickLibraryFile), keyEquivalent: "")
+        choose.target = self
+        submenu.addItem(choose)
+
+        if library.isConfigured {
+            let reload = NSMenuItem(title: L10n.t(.libraryReload),
+                                    action: #selector(reloadLibrary), keyEquivalent: "")
+            reload.target = self
+            submenu.addItem(reload)
+        }
+
+        submenu.addItem(.separator())
+
+        let onlyOwned = NSMenuItem(title: L10n.t(.onlyMyGames),
+                                   action: #selector(toggleOnlyOwned), keyEquivalent: "")
+        onlyOwned.target = self
+        onlyOwned.state = onlyOwnedNotifications ? .on : .off
+        submenu.addItem(onlyOwned)
+
+        item.submenu = submenu
+        return item
+    }
+
     // MARK: Polling
 
     private func scheduleTimer() {
@@ -293,6 +347,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     private func runCheck(reason: String) {
         if isChecking { return }
         isChecking = true
+        library.reloadIfChanged()
         rebuildMenu()
         log("checking (\(reason)) …")
 
@@ -305,19 +360,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
                     : try await self.api.fetchChanges(modifiedAfter: self.store.state.lastModified)
                 let result = ChangeDetector.detect(state: self.store.state,
                                                    fetched: fetched, seeding: firstRun)
-                let details: [Int: String]
+                let metas: [Int: EventMeta]
                 if firstRun {
-                    details = [:]
+                    metas = [:]
                 } else {
                     let selected = self.selectedPlatformKeys
                     let visible = result.events.filter {
                         Platforms.matches(categories: $0.post.categories, selectedKeys: selected)
                     }
-                    details = await self.computeDetails(for: visible)
+                    metas = await self.computeDetails(for: visible)
                 }
                 await MainActor.run {
                     self.applyResult(events: result.events, newState: result.state,
-                                     firstRun: firstRun, fetchedCount: fetched.count, details: details)
+                                     firstRun: firstRun, fetchedCount: fetched.count, metas: metas)
                 }
             } catch {
                 await MainActor.run {
@@ -332,7 +387,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
 
     private func applyResult(events: [GameEvent], newState: DetectorState,
-                             firstRun: Bool, fetchedCount: Int, details: [Int: String]) {
+                             firstRun: Bool, fetchedCount: Int, metas: [Int: EventMeta]) {
         // Advance state for ALL changes (dedup), regardless of platform filter.
         store.update(newState)
         lastError = nil
@@ -344,29 +399,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             Notifier.postActivation()
         } else {
             let selected = selectedPlatformKeys
-            let visible = events.filter {
+            var visible = events.filter {
                 Platforms.matches(categories: $0.post.categories, selectedKeys: selected)
             }
-            log("\(events.count) change(s), \(visible.count) after platform filter")
+            // Record everything (platform-filtered) to the history, with codes/versions.
+            let entries = visible.reversed().map { event -> HistoryEntry in
+                let meta = metas[event.post.id]
+                return HistoryEntry(event: event, detail: meta?.detail,
+                                    codes: meta?.codes, dlpsVersions: meta?.versions)
+            }
+            history.add(entries)
+
+            // Notifications: optionally only for games in the user's library.
+            if onlyOwnedNotifications && !library.index.isEmpty {
+                visible = visible.filter { event in
+                    let meta = metas[event.post.id]
+                    if case .notOwned = library.status(codes: meta?.codes, name: event.post.name,
+                                                       dlpsVersions: meta?.versions) { return false }
+                    return true
+                }
+            }
+            log("\(events.count) change(s), \(visible.count) notified")
             for event in visible {
-                Notifier.post(event: event, detail: details[event.post.id])
+                Notifier.post(event: event, detail: metas[event.post.id]?.detail)
             }
-            let newEntries = visible.reversed().map {
-                HistoryEntry(event: $0, detail: details[$0.post.id])
-            }
-            history.add(newEntries)
         }
         rebuildMenu()
     }
 
-    /// For the given (already platform-filtered) events, fetch each post's content,
-    /// diff its download entries against the stored snapshot, and return a "what
-    /// changed" summary per post id (updates only). Also refreshes the snapshots.
-    /// Bounded by `maxFetches` so a backlog can't trigger a flood of requests.
-    private func computeDetails(for events: [GameEvent]) async -> [Int: String] {
+    /// Per-event metadata gathered from the post content.
+    private struct EventMeta {
+        var detail: String?
+        var codes: [String]
+        var versions: [String]
+    }
+
+    /// For the given (already platform-filtered) events, fetch each post's content:
+    /// the "what changed" summary (updates), plus TitleID codes and version strings
+    /// for library matching. Bounded by `maxFetches`.
+    private func computeDetails(for events: [GameEvent]) async -> [Int: EventMeta] {
         guard !events.isEmpty else { return [:] }
         var signatures = SignatureStore.load()
-        var details: [Int: String] = [:]
+        var metas: [Int: EventMeta] = [:]
         let maxFetches = 12
         var fetches = 0
         for event in events {
@@ -377,13 +451,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             let key = String(event.post.id)
             let previous = signatures[key]
             signatures[key] = entries
+            var detail: String?
             if !event.isNew, let previous,
                let summary = UpdateDetails.summarize(old: previous, new: entries) {
-                details[event.post.id] = summary
+                detail = summary
             }
+            metas[event.post.id] = EventMeta(detail: detail,
+                                             codes: UpdateDetails.codes(fromHTML: html),
+                                             versions: UpdateDetails.versionStrings(fromHTML: html))
         }
         SignatureStore.save(signatures)
-        return details
+        return metas
     }
 
     /// Backfill: fetch everything modified in the last `days` days and merge it into
@@ -449,9 +527,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         NSWorkspace.shared.open(PlatformStyle.iconsFolderURL)
     }
 
+    @objc private func pickLibraryFile() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.plainText, .text, .utf8PlainText]
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        let response = panel.runModal()
+        if historyWindow?.isVisible != true { NSApp.setActivationPolicy(.accessory) }
+        if response == .OK, let url = panel.url {
+            library.setPath(url.path)
+            rebuildMenu()
+        }
+    }
+
+    @objc private func reloadLibrary() {
+        log("library reloaded: \(library.reload()) games")
+        rebuildMenu()
+    }
+
+    @objc private func toggleOnlyOwned() {
+        defaults.set(!onlyOwnedNotifications, forKey: "onlyOwnedNotifications")
+        rebuildMenu()
+    }
+
     @objc private func showHistoryAction() {
         if historyWindow == nil {
-            let hosting = NSHostingController(rootView: HistoryView(model: history, onLoadMore: { [weak self] in
+            let hosting = NSHostingController(rootView: HistoryView(model: history, library: library, onLoadMore: { [weak self] in
                 _ = await self?.backfillHistory()
             }))
             let window = NSWindow(contentViewController: hosting)

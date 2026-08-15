@@ -13,6 +13,10 @@ struct HistoryEntry: Codable, Identifiable, Equatable {
     let modified: String?
     /// For updates: what was added, e.g. "+ USA (@DUPLEX)".
     let detail: String?
+    /// TitleID codes found in the post (for matching the user's library).
+    let codes: [String]?
+    /// Dotted version strings found in the post (best-effort, for version compare).
+    let dlpsVersions: [String]?
     /// When this app recorded the event.
     let recordedAt: Date
 
@@ -23,10 +27,11 @@ struct HistoryEntry: Codable, Identifiable, Equatable {
     var url: URL? { URL(string: link) }
 
     enum CodingKeys: String, CodingKey {
-        case postID, name, link, isNew, platform, modified, detail, recordedAt
+        case postID, name, link, isNew, platform, modified, detail, codes, dlpsVersions, recordedAt
     }
 
-    init(event: GameEvent, detail: String?, recordedAt: Date = Date()) {
+    init(event: GameEvent, detail: String?, codes: [String]? = nil,
+         dlpsVersions: [String]? = nil, recordedAt: Date = Date()) {
         postID = event.post.id
         name = event.post.name
         link = event.post.link
@@ -34,11 +39,14 @@ struct HistoryEntry: Codable, Identifiable, Equatable {
         platform = event.post.platforms.first?.name
         modified = event.post.modified
         self.detail = detail
+        self.codes = codes
+        self.dlpsVersions = dlpsVersions
         self.recordedAt = recordedAt
     }
 
     init(postID: Int, name: String, link: String, isNew: Bool,
-         platform: String?, modified: String?, detail: String?, recordedAt: Date) {
+         platform: String?, modified: String?, detail: String?, recordedAt: Date,
+         codes: [String]? = nil, dlpsVersions: [String]? = nil) {
         self.postID = postID
         self.name = name
         self.link = link
@@ -46,6 +54,8 @@ struct HistoryEntry: Codable, Identifiable, Equatable {
         self.platform = platform
         self.modified = modified
         self.detail = detail
+        self.codes = codes
+        self.dlpsVersions = dlpsVersions
         self.recordedAt = recordedAt
     }
 }

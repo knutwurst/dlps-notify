@@ -80,6 +80,8 @@ enum L10n {
         // History window
         case history, colPlatform, colTitle, colWhen, colDetails
         case filterAll, search, entryCount, historyEmpty, loadMore, platformIcons
+        case library, libraryChoose, libraryReload, libraryNone, libraryCount
+        case onlyMyGames, colOwned, filterOwned
     }
 
     /// Used by `--dump-langs` to verify every table renders.
@@ -110,6 +112,9 @@ enum L10n {
         .colWhen: "When", .colDetails: "Details", .filterAll: "All",
         .search: "Search", .entryCount: "%d entries", .historyEmpty: "No history yet",
         .loadMore: "Load more", .platformIcons: "Platform icons…",
+        .library: "Library", .libraryChoose: "Choose file…", .libraryReload: "Reload",
+        .libraryNone: "No file selected", .libraryCount: "%d games",
+        .onlyMyGames: "Notify only my games", .colOwned: "Library", .filterOwned: "Mine",
     ]
 
     private static let germanTable: [Key: String] = [
@@ -127,6 +132,9 @@ enum L10n {
         .colWhen: "Wann", .colDetails: "Details", .filterAll: "Alle",
         .search: "Suchen", .entryCount: "%d Einträge", .historyEmpty: "Noch kein Verlauf",
         .loadMore: "Mehr laden", .platformIcons: "Plattform-Icons…",
+        .library: "Bibliothek", .libraryChoose: "Datei wählen…", .libraryReload: "Neu einlesen",
+        .libraryNone: "Keine Datei gewählt", .libraryCount: "%d Spiele",
+        .onlyMyGames: "Nur meine Spiele benachrichtigen", .colOwned: "Bibliothek", .filterOwned: "Meine",
     ]
 
     private static let frenchTable: [Key: String] = [
