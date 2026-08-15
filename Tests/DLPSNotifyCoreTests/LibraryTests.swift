@@ -21,7 +21,8 @@ final class LibraryTests: XCTestCase {
     func testIndexByCodeAndName() {
         let index = LibraryIndex(games: LibraryParser.parse("Alan Wake Remastered [CUSA24653] [v01.03] [PS4]"))
         XCTAssertEqual(index.game(forCode: "cusa24653")?.version, "01.03")          // case-insensitive
-        XCTAssertEqual(index.game(forName: "Alan  Wake  Remastered!")?.code, "CUSA24653")  // normalized
+        XCTAssertEqual(index.game(forName: "Alan  Wake  Remastered!", platform: "PS4")?.code, "CUSA24653")
+        XCTAssertNil(index.game(forName: "Alan Wake Remastered", platform: "PS5"))  // wrong platform
         XCTAssertNil(index.game(forCode: "PPSA00000"))
     }
 
@@ -30,7 +31,7 @@ final class LibraryTests: XCTestCase {
         Assassins Creed Valhalla Ultimate Edition [CUSA18522] [v07.00] [PS4]
         Assassins Creed Valhalla Ultimate Edition [CUSA18534] [v08.00] [PS4]
         """))
-        XCTAssertEqual(index.game(forName: "Assassins Creed Valhalla Ultimate Edition")?.version, "08.00")
+        XCTAssertEqual(index.game(forName: "Assassins Creed Valhalla Ultimate Edition", platform: "PS4")?.version, "08.00")
     }
 
     func testVersionCompare() {

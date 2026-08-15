@@ -19,19 +19,19 @@ public struct LibraryGame: Equatable, Sendable {
 /// Fast lookup over a parsed library, by TitleID (exact) and normalized name (fallback).
 public struct LibraryIndex: Sendable {
     public private(set) var byCode: [String: LibraryGame] = [:]
-    public private(set) var byName: [String: LibraryGame] = [:]
+    private var byNamePlatform: [String: LibraryGame] = [:]
     public var count: Int { byCode.count }
-    public var isEmpty: Bool { byCode.isEmpty && byName.isEmpty }
+    public var isEmpty: Bool { byCode.isEmpty && byNamePlatform.isEmpty }
 
     public init(games: [LibraryGame]) {
         for game in games {
             byCode[game.code] = game
-            let key = LibraryIndex.normalize(game.name)
-            if let existing = byName[key] {
-                // On duplicate names keep the higher version (e.g. two "Valhalla" editions).
-                if preferNew(existing: existing, candidate: game) { byName[key] = game }
+            let key = LibraryIndex.nameKey(game.name, game.platform)
+            if let existing = byNamePlatform[key] {
+                // On duplicate name+platform keep the higher version (e.g. two "Valhalla" editions).
+                if preferNew(existing: existing, candidate: game) { byNamePlatform[key] = game }
             } else {
-                byName[key] = game
+                byNamePlatform[key] = game
             }
         }
     }
@@ -45,10 +45,19 @@ public struct LibraryIndex: Sendable {
     }
 
     public func game(forCode code: String) -> LibraryGame? { byCode[code.uppercased()] }
-    public func game(forName name: String) -> LibraryGame? { byName[LibraryIndex.normalize(name)] }
+
+    /// Name match requires the same platform — a PS4 title must not match a PS5 post.
+    public func game(forName name: String, platform: String?) -> LibraryGame? {
+        byNamePlatform[LibraryIndex.nameKey(name, platform)]
+    }
 
     public static func normalize(_ string: String) -> String {
         String(string.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) })
+    }
+
+    /// Combined normalized-name + platform key for platform-aware matching.
+    public static func nameKey(_ name: String, _ platform: String?) -> String {
+        normalize(name) + "|" + (platform ?? "").uppercased()
     }
 }
 

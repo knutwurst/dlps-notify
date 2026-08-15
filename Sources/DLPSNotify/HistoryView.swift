@@ -146,13 +146,13 @@ struct LibraryTab: View {
             if let codes = entry.codes {
                 for code in codes where byCode[code] == nil { byCode[code] = entry }
             }
-            let key = LibraryIndex.normalize(entry.name)
+            let key = LibraryIndex.nameKey(entry.name, entry.platform)
             if byName[key] == nil { byName[key] = entry }
         }
 
         let query = search.trimmingCharacters(in: .whitespaces)
         let built: [LibraryRow] = library.games.map { game in
-            let match = byCode[game.code] ?? byName[LibraryIndex.normalize(game.name)]
+            let match = byCode[game.code] ?? byName[LibraryIndex.nameKey(game.name, game.platform)]
             let dlpsVersion = match.flatMap(Self.bestDLPSVersion)
             let update: Bool
             if let mine = game.version, let dv = dlpsVersion {

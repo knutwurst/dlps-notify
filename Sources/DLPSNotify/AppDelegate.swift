@@ -88,12 +88,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             var byCode: [String: HistoryEntry] = [:], byName: [String: HistoryEntry] = [:]
             for entry in history.entries {
                 if let codes = entry.codes { for c in codes where byCode[c] == nil { byCode[c] = entry } }
-                let key = LibraryIndex.normalize(entry.name)
+                let key = LibraryIndex.nameKey(entry.name, entry.platform)
                 if byName[key] == nil { byName[key] = entry }
             }
             var seen = 0, updates = 0
             for game in library.games {
-                guard let match = byCode[game.code] ?? byName[LibraryIndex.normalize(game.name)] else { continue }
+                guard let match = byCode[game.code] ?? byName[LibraryIndex.nameKey(game.name, game.platform)] else { continue }
                 seen += 1
                 var versions = match.dlpsVersions ?? []
                 if let detail = match.detail { versions += UpdateDetails.versionStrings(fromHTML: detail) }
@@ -422,6 +422,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
                 visible = visible.filter { event in
                     let meta = metas[event.post.id]
                     if case .notOwned = library.status(codes: meta?.codes, name: event.post.name,
+                                                       platform: event.post.platforms.first?.name,
                                                        dlpsVersions: meta?.versions) { return false }
                     return true
                 }
@@ -544,7 +545,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         let response = panel.runModal()
         if historyWindow?.isVisible != true { NSApp.setActivationPolicy(.accessory) }
         if response == .OK, let url = panel.url {
-            library.setPath(url.path)
+            library.setURL(url)
             rebuildMenu()
         }
     }

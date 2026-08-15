@@ -11,7 +11,9 @@ enum OwnershipStatus {
     case updateAvailable(myVersion: String?)
 }
 
-/// Loads and re-reads the user's library file, exposing a fast lookup index.
+/// Loads and re-reads the user's library file. Uses a security-scoped bookmark so
+/// access persists across launches, even for TCC-protected folders (Dropbox/iCloud,
+/// Desktop, Documents…). A failed read never wipes the already-loaded list.
 final class LibraryModel: ObservableObject {
     @Published private(set) var index = LibraryIndex(games: [])
     @Published private(set) var games: [LibraryGame] = []
@@ -19,6 +21,7 @@ final class LibraryModel: ObservableObject {
     private var lastModified: Date?
 
     private let pathKey = "libraryPath"
+    private let bookmarkKey = "libraryBookmark"
 
     init() {
         path = UserDefaults.standard.string(forKey: pathKey)
@@ -27,45 +30,72 @@ final class LibraryModel: ObservableObject {
 
     var isConfigured: Bool { path != nil }
     var count: Int { index.count }
+    var fileName: String? { path.map { ($0 as NSString).lastPathComponent } }
 
-    func setPath(_ newPath: String?) {
-        path = newPath
-        UserDefaults.standard.set(newPath, forKey: pathKey)
+    /// Configure from a user-picked URL: store the path (for display) and a
+    /// security-scoped bookmark (for persistent read access), then load.
+    func setURL(_ url: URL) {
+        path = url.path
+        UserDefaults.standard.set(url.path, forKey: pathKey)
+        if let data = (try? url.bookmarkData(options: [.withSecurityScope])) ?? (try? url.bookmarkData()) {
+            UserDefaults.standard.set(data, forKey: bookmarkKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: bookmarkKey)
+        }
         lastModified = nil
         reload()
     }
 
-    /// Re-parse the file now. Returns the number of games loaded.
     @discardableResult
     func reload() -> Int {
-        guard let path, let text = try? String(contentsOfFile: path, encoding: .utf8) else {
+        guard let (url, scoped) = resolveURL() else {
             games = []
             index = LibraryIndex(games: [])
             return 0
         }
+        if scoped { _ = url.startAccessingSecurityScopedResource() }
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else {
+            return index.count   // keep the last good data on a transient read failure
+        }
         let parsed = LibraryParser.parse(text)
         games = parsed
         index = LibraryIndex(games: parsed)
-        lastModified = modificationDate()
+        lastModified = modificationDate(url)
         return index.count
     }
 
-    /// Basename of the configured file, for display.
-    var fileName: String? { path.map { ($0 as NSString).lastPathComponent } }
-
     /// Re-read only if the file changed since last read (called on each poll).
     func reloadIfChanged() {
-        guard path != nil else { return }
-        if modificationDate() != lastModified { reload() }
+        guard let (url, scoped) = resolveURL() else { return }
+        if scoped { _ = url.startAccessingSecurityScopedResource() }
+        let current = modificationDate(url)
+        if scoped { url.stopAccessingSecurityScopedResource() }
+        if current != lastModified { reload() }
     }
 
-    private func modificationDate() -> Date? {
-        guard let path else { return nil }
-        return (try? FileManager.default.attributesOfItem(atPath: path)[.modificationDate]) as? Date
+    private func resolveURL() -> (url: URL, scoped: Bool)? {
+        if let data = UserDefaults.standard.data(forKey: bookmarkKey) {
+            var stale = false
+            if let url = try? URL(resolvingBookmarkData: data, options: [.withSecurityScope],
+                                  relativeTo: nil, bookmarkDataIsStale: &stale) {
+                return (url, true)
+            }
+            if let url = try? URL(resolvingBookmarkData: data, relativeTo: nil, bookmarkDataIsStale: &stale) {
+                return (url, false)
+            }
+        }
+        if let path { return (URL(fileURLWithPath: path), false) }
+        return nil
     }
 
-    /// Ownership + version status for a DLPS entry.
-    func status(codes: [String]?, name: String, dlpsVersions: [String]?) -> OwnershipStatus {
+    private func modificationDate(_ url: URL) -> Date? {
+        (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+    }
+
+    /// Ownership + version status for a DLPS entry (platform-aware name fallback).
+    func status(codes: [String]?, name: String, platform: String?, dlpsVersions: [String]?) -> OwnershipStatus {
         guard !index.isEmpty else { return .unknown }
         var game: LibraryGame?
         if let codes {
@@ -73,7 +103,7 @@ final class LibraryModel: ObservableObject {
                 if let match = index.game(forCode: code) { game = match; break }
             }
         }
-        if game == nil { game = index.game(forName: name) }
+        if game == nil { game = index.game(forName: name, platform: platform) }
         guard let game else { return .notOwned }
 
         if let mine = game.version, let dlpsVersions {
