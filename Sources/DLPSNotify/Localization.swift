@@ -82,6 +82,7 @@ enum L10n {
         case filterAll, search, entryCount, historyEmpty, loadMore, platformIcons
         case library, libraryChoose, libraryReload, libraryNone, libraryCount
         case onlyMyGames, colOwned, filterOwned
+        case tabMyGames, colMyVersion, colDlpsVersion, colLastSeen, libraryFileLabel, onlyUpdates
     }
 
     /// Used by `--dump-langs` to verify every table renders.
@@ -115,6 +116,8 @@ enum L10n {
         .library: "Library", .libraryChoose: "Choose file…", .libraryReload: "Reload",
         .libraryNone: "No file selected", .libraryCount: "%d games",
         .onlyMyGames: "Notify only my games", .colOwned: "Library", .filterOwned: "Mine",
+        .tabMyGames: "My games", .colMyVersion: "My version", .colDlpsVersion: "DLPS version",
+        .colLastSeen: "Last seen", .libraryFileLabel: "File", .onlyUpdates: "Updates only",
     ]
 
     private static let germanTable: [Key: String] = [
@@ -135,6 +138,8 @@ enum L10n {
         .library: "Bibliothek", .libraryChoose: "Datei wählen…", .libraryReload: "Neu einlesen",
         .libraryNone: "Keine Datei gewählt", .libraryCount: "%d Spiele",
         .onlyMyGames: "Nur meine Spiele benachrichtigen", .colOwned: "Bibliothek", .filterOwned: "Meine",
+        .tabMyGames: "Meine Spiele", .colMyVersion: "Meine Version", .colDlpsVersion: "DLPS-Version",
+        .colLastSeen: "Zuletzt gesehen", .libraryFileLabel: "Datei", .onlyUpdates: "Nur Updates",
     ]
 
     private static let frenchTable: [Key: String] = [

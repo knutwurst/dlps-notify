@@ -14,7 +14,8 @@ enum OwnershipStatus {
 /// Loads and re-reads the user's library file, exposing a fast lookup index.
 final class LibraryModel: ObservableObject {
     @Published private(set) var index = LibraryIndex(games: [])
-    private(set) var path: String?
+    @Published private(set) var games: [LibraryGame] = []
+    @Published private(set) var path: String?
     private var lastModified: Date?
 
     private let pathKey = "libraryPath"
@@ -38,13 +39,19 @@ final class LibraryModel: ObservableObject {
     @discardableResult
     func reload() -> Int {
         guard let path, let text = try? String(contentsOfFile: path, encoding: .utf8) else {
+            games = []
             index = LibraryIndex(games: [])
             return 0
         }
-        index = LibraryIndex(games: LibraryParser.parse(text))
+        let parsed = LibraryParser.parse(text)
+        games = parsed
+        index = LibraryIndex(games: parsed)
         lastModified = modificationDate()
         return index.count
     }
+
+    /// Basename of the configured file, for display.
+    var fileName: String? { path.map { ($0 as NSString).lastPathComponent } }
 
     /// Re-read only if the file changed since last read (called on each poll).
     func reloadIfChanged() {

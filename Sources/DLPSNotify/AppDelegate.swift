@@ -68,7 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         }
         if CommandLine.arguments.contains("--test-history-render") {
             // Render the history view offscreen (no visible window) as a crash smoke test.
-            let view = NSHostingView(rootView: HistoryView(model: history, library: library))
+            let view = NSHostingView(rootView: MainWindowView(history: history, library: library))
             view.frame = NSRect(x: 0, y: 0, width: 720, height: 460)
             view.layoutSubtreeIfNeeded()
             _ = view.fittingSize
@@ -304,9 +304,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         let item = NSMenuItem(title: L10n.t(.library), action: nil, keyEquivalent: "")
         let submenu = NSMenu()
 
-        let status = NSMenuItem(
-            title: library.isConfigured ? L10n.t(.libraryCount, library.count) : L10n.t(.libraryNone),
-            action: nil, keyEquivalent: "")
+        let statusTitle = library.isConfigured
+            ? (library.fileName ?? "?") + " — " + L10n.t(.libraryCount, library.count)
+            : L10n.t(.libraryNone)
+        let status = NSMenuItem(title: statusTitle, action: nil, keyEquivalent: "")
         status.isEnabled = false
         submenu.addItem(status)
 
@@ -554,9 +555,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
 
     @objc private func showHistoryAction() {
         if historyWindow == nil {
-            let hosting = NSHostingController(rootView: HistoryView(model: history, library: library, onLoadMore: { [weak self] in
-                _ = await self?.backfillHistory()
-            }))
+            let hosting = NSHostingController(rootView: MainWindowView(
+                history: history, library: library,
+                onLoadMore: { [weak self] in _ = await self?.backfillHistory() },
+                onChooseLibrary: { [weak self] in self?.pickLibraryFile() }))
             let window = NSWindow(contentViewController: hosting)
             window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
             window.setContentSize(NSSize(width: 720, height: 460))
