@@ -1,7 +1,7 @@
 # DLPS Notify
 
-A macOS menu bar app that watches a game-release site and notifies you when an
-entry is added or updated. Click a notification to open its page.
+A little menu bar app for macOS. It keeps an eye on a game release site and pings you when a game
+shows up or gets an update. Click the notification and the game page opens.
 
 <p align="center">
   <img src="Resources/appicon.png" width="128" alt="DLPS Notify icon">
@@ -9,68 +9,84 @@ entry is added or updated. Click a notification to open its page.
 
 ## What it does
 
-- Polls on an interval (default every 30 minutes) and shows a notification for each
-  **new entry** and each **update** to an existing one.
-- For updates, shows what was added when it can tell (e.g. a newly added region or
-  release group, like `+ EUR (exFAT)`) — best-effort, falls back to a plain update.
-- Lets you pick which platforms you care about — **PS2 / PS3 / PS4 / PS5 / PSN**.
-- Keeps a list of the most recent entries in the menu, colour-coded by platform; click one to open its page.
-- A **History window** — menu → *History…*, or **right-click the menu bar icon** — with a searchable,
-  filterable table of every new game and update (platform, time, what changed, and a clickable link per row).
-- Available in **13 languages** — English (default), German, French, Spanish, Italian, Portuguese,
-  Dutch, Polish, Russian, Turkish, Japanese, Simplified Chinese, Korean. Switch in the menu, or follow
-  the system language.
-- Optional launch-at-login.
+- Checks every 30 minutes (or 15, or 60, your call) and notifies you about **new games** and **updates**.
+- On updates it tries to tell you what changed, e.g. `+ EUR (exFAT)`. If it can't figure that out,
+  you just get "Update".
+- You pick the platforms you care about: **PS2, PS3, PS4, PS5, PSN**.
+- The menu lists the latest entries with a coloured platform badge. Click one to open it.
+- **History window**: menu → *History…*, or right-click the menu bar icon. Search, filter, click the links.
+- **My games**: point the app at a text file with your own library and it shows which of your games
+  got a newer version. It can also stay quiet about everything you don't own (see below).
+- 13 languages. English by default, or it follows your system language.
+- Launch at login, if you want it.
 
-On the first run it silently records the current entries — no flood of notifications —
-and only notifies on changes from then on.
+The first run stays silent. The app just notes what's already there and only tells you about changes
+after that. Nobody needs 300 notifications on day one.
+
+### Your game library
+
+One game per line, in this format:
+
+```
+Alan Wake II Deluxe Edition [PPSA02572] [v01.200.007] [PS5]
+Alien Isolation [BLES01697] [PS3]
+```
+
+The version is optional and the brackets can come in any order. Pick the file under
+*Library → Choose file…*. The app re-reads it when the file changes. Turn on *Notify only my games*
+if you only care about stuff you own. The *My games* tab in the history window lists your whole
+library with your version next to the newest one the site has seen.
+
+Matching goes by TitleID first, then by name on the same platform. A PS4 game won't match a PS5 post.
+
+If the file lives in Dropbox, iCloud or another folder macOS protects, pick it once through the dialog.
+The app keeps a bookmark so it can still read the file after a restart.
 
 ### Platform icons
 
-Platforms show as colour-coded badges by default. Want real platform logos instead? Drop your own
-image files named `ps5.png`, `ps4.png`, `ps3.png`, `ps2.png`, `psn.png` (png/pdf/jpg/tiff) into
-`~/Library/Application Support/DLPSNotify/platforms/` — the menu item *Platform icons…* opens that
-folder. They replace the badges in the menu and history. No logos are bundled with the app; you supply
-your own assets.
+Out of the box you get coloured badges. Want logos instead? Put your own `ps5.png`, `ps4.png`,
+`ps3.png`, `ps2.png` or `psn.png` (png, pdf, jpg or tiff) into
+`~/Library/Application Support/DLPSNotify/platforms/`. The menu item *Platform icons…* opens that
+folder. I don't ship any logos with the app, so bring your own.
 
 ## How it works
 
-The site is a WordPress install behind Cloudflare. Instead of scraping HTML, the app reads its REST
-API (`/wp-json/wp/v2/posts`), which returns clean JSON. Cloudflare rejects requests without a browser
-User-Agent, so the app sends one. Each poll asks for everything modified after the last-seen
-timestamp, ordered oldest-first and drained across pages, so nothing is missed after downtime. A post
-seen for the first time whose `modified` is close to its publish `date` is a **new entry**; a larger
-gap (or a later change to a post already seen) is an **update**. The platform comes from the post's
-WordPress categories. State lives in `~/Library/Application Support/DLPSNotify/state.json`.
+The site runs WordPress behind Cloudflare. I skip the HTML and read the REST API
+(`/wp-json/wp/v2/posts`) instead, which hands back clean JSON. Cloudflare blocks anything without a
+browser User-Agent, so the app sends one.
+
+Each poll asks for everything modified since the last timestamp it saw, oldest first, page by page.
+If your Mac was off for three days, you still get all of it. A post that's new to the app and whose
+`modified` sits close to its `date` counts as a new game. Anything else is an update. The platform
+comes from the WordPress categories. State lives in `~/Library/Application Support/DLPSNotify/state.json`.
 
 ### Notifications
 
-macOS only lets a **code-signed** app post notifications under its own name. This app is distributed
-unsigned, so it delivers notifications through a bundled copy of
-[`terminal-notifier`](https://github.com/julienXX/terminal-notifier) — branded with the DLPS Notify
-title and icon. The small sender label reads "terminal-notifier"; the icon, title and content are all
-DLPS Notify. `terminal-notifier` is bundled inside the app, so no Homebrew is needed on the target Mac.
+macOS only lets code-signed apps post notifications under their own name, and I don't pay Apple for a
+certificate. So the app ships its own copy of
+[`terminal-notifier`](https://github.com/julienXX/terminal-notifier) and sends everything through that,
+with the DLPS Notify title and icon. The small sender label says "terminal-notifier", everything else
+is DLPS Notify. You don't need Homebrew for this.
 
 ## Install
 
-Download `DLPSNotify-<version>.dmg` from the
-[Releases](https://github.com/knutwurst/dlps-notify/releases) page, open it, then:
+Grab `DLPSNotify-<version>.dmg` from [Releases](https://github.com/knutwurst/dlps-notify/releases),
+open it, then:
 
-1. Right-click **Install.command** → **Open** (needed once, because the app isn't notarized).
-2. The app installs to `/Applications` and appears in the menu bar.
-3. If no banners appear, allow notifications for **terminal-notifier** in
-   System Settings → Notifications.
+1. Right-click **Install.command** → **Open**. You only need this once, because the app isn't notarized.
+2. The app lands in `/Applications` and shows up in the menu bar.
+3. No banners? Allow notifications for **terminal-notifier** in System Settings → Notifications.
 
 ## Build from source
 
 ```sh
-./build.sh            # builds DLPSNotify.app (release, bundles terminal-notifier, ad-hoc signed)
-./make-dmg.sh         # packages DLPSNotify-<version>.dmg
-swift test            # runs the unit tests (needs Xcode's toolchain — see below)
+./build.sh            # release build, bundles terminal-notifier, ad-hoc signed
+./make-dmg.sh         # makes DLPSNotify-<version>.dmg
+swift test            # unit tests, needs Xcode (see below)
 ```
 
-`swift test` needs XCTest, which ships with Xcode rather than the Command Line Tools. If
-`xcode-select -p` points at CommandLineTools, run:
+XCTest comes with Xcode, not with the Command Line Tools. If `xcode-select -p` points at
+CommandLineTools, use:
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
@@ -82,32 +98,42 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 DLPS_SELFTEST=1 open -W /Applications/DLPSNotify.app --args --selftest
 ```
 
-Posts a test banner, then runs the real pipeline against the live API and posts a few real
-notifications. Progress is logged to `~/Library/Application Support/DLPSNotify/dlps.log`.
+Sends a test banner, then runs the real pipeline against the live API and fires a few real
+notifications. The log goes to `~/Library/Application Support/DLPSNotify/dlps.log`.
 
 ## Requirements
 
 - macOS 13 or newer
-- To build: Swift toolchain (Xcode or Command Line Tools)
+- For building: a Swift toolchain (Xcode or the Command Line Tools)
 
 ## Project layout
 
 ```
-Sources/DLPSNotifyCore/   Pure logic — no AppKit, no UI. Unit-tested.
-  GamePost.swift          API model + HTML-decoded title + platform
-  Platform.swift          PS2/PS3/PS4/PS5/PSN category mapping + filter
-  APIClient.swift         REST client (browser UA, paginated drain)
-  ChangeDetector.swift    new-vs-update decision + dedup + first-run seeding
-  GameStore.swift         JSON state persistence
-Sources/DLPSNotify/       The app
-  AppDelegate.swift       menu bar, polling timer, platform filter, self-test
-  Notifier.swift          branding
-  ExternalNotifier.swift  delivery via bundled terminal-notifier / osascript
-  Recent.swift            recent list persistence
+Sources/DLPSNotifyCore/   logic only, no AppKit, unit tested
+  APIClient.swift         REST client (browser UA, pagination)
+  ChangeDetector.swift    new vs. update, dedup, silent first run
+  DLPSDate.swift          the API's timestamp format
+  GamePost.swift          API model, decoded title, platform
+  GameStore.swift         state.json
+  HTMLEntities.swift      &amp; and friends
+  Library.swift           library file parser, lookup, version compare
+  Platform.swift          PS2/PS3/PS4/PS5/PSN categories + filter
+  UpdateDetails.swift     "what changed" diff
+Sources/DLPSNotify/       the app
+  AppDelegate.swift       menu, polling, settings, debug flags
+  History*.swift          history storage + window (History / My games tabs)
+  LibraryModel.swift      loads your library file (with bookmark)
+  Localization.swift      the 13 languages
+  Notifier.swift          notification text
+  ExternalNotifier.swift  delivery via terminal-notifier / osascript
+  PlatformStyle.swift     badges and custom icons
+  Recent.swift            dates in the menu
+  SignatureStore.swift    snapshots for the update diff
+  Log.swift               log file
 dist/                     installer + DMG read-me
 scripts/makeicon.swift    regenerates the app icon
 ```
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Bundles `terminal-notifier` (MIT).
+MIT, see [LICENSE](LICENSE). Bundles `terminal-notifier` (MIT).
