@@ -1,9 +1,6 @@
 import Foundation
 
-/// Compact date rendering for the menu's recent list (no timezone conversion —
-/// shows the same wall-clock the site uses). Today → just "HH:mm"; same year →
-/// "dd.MM. HH:mm"; otherwise "dd.MM.yyyy HH:mm". The history window uses the
-/// fuller `DateDisplay.full` instead.
+// today: just HH:mm, this year: dd.MM. HH:mm, otherwise the full thing
 enum RecentDate {
     static func display(_ apiTimestamp: String?, now: Date = Date()) -> String? {
         guard let value = apiTimestamp else { return nil }

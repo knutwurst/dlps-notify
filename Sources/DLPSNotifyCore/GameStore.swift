@@ -1,7 +1,6 @@
 import Foundation
 
-/// Loads and persists `DetectorState` as JSON under
-/// `~/Library/Application Support/DLPSNotify/state.json`.
+// ~/Library/Application Support/DLPSNotify/state.json
 public final class GameStore {
     public let fileURL: URL
     public private(set) var state: DetectorState
@@ -12,7 +11,7 @@ public final class GameStore {
         self.state = GameStore.load(from: url) ?? DetectorState()
     }
 
-    /// False on a genuine first run (nothing recorded yet).
+    // false on a fresh install
     public var isSeeded: Bool { !state.lastModified.isEmpty }
 
     public func update(_ newState: DetectorState) {

@@ -1,7 +1,7 @@
 import AppKit
 
-// Generates an .iconset of a gradient squircle with a white game-controller glyph.
-// Usage: swift makeicon.swift <iconset-dir>
+// gradient squircle with a controller on it
+// swift makeicon.swift <iconset-dir>
 
 let iconsetDir = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "AppIcon.iconset"
 try? FileManager.default.createDirectory(atPath: iconsetDir, withIntermediateDirectories: true)

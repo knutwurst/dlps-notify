@@ -1,11 +1,9 @@
 import AppKit
 import SwiftUI
 
-/// Platform indicators. Uses a user-supplied icon file if present (so you can drop
-/// in your own logos), otherwise a colour-coded badge. We never bundle or fetch
-/// third-party logos ourselves — those are trademarks; you provide your own.
+// your own icons from the folder if there are any, colored pills otherwise.
+// no logos shipped, not my trademarks.
 enum PlatformStyle {
-    // Distinct hues per platform — functional colour coding, not official brand colours.
     private static let rgb: [String: (r: Double, g: Double, b: Double)] = [
         "PS5": (0.18, 0.44, 0.93),   // blue
         "PS4": (0.16, 0.60, 0.33),   // green
@@ -27,9 +25,9 @@ enum PlatformStyle {
 
     static func isKnown(_ name: String) -> Bool { rgb[name] != nil }
 
-    // MARK: - User-supplied icons
+    // MARK: - Custom icons
 
-    /// Folder where the user can drop platform icons (ps5.png, ps4.png, …).
+    // ps5.png, ps4.png, ...
     static var iconsFolderURL: URL {
         let base = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask).first
@@ -44,7 +42,6 @@ enum PlatformStyle {
     private static var iconCache: [String: NSImage?] = [:]
     static func clearIconCache() { iconCache = [:] }
 
-    /// A user-provided icon for the platform, or nil if none is present.
     static func iconImage(forName name: String) -> NSImage? {
         if let cached = iconCache[name] { return cached }
         let image = loadIcon(forName: name)
@@ -53,7 +50,7 @@ enum PlatformStyle {
     }
 
     private static func loadIcon(forName name: String) -> NSImage? {
-        let base = name.lowercased()   // e.g. "ps5"
+        let base = name.lowercased()
         let extensions = ["png", "pdf", "jpg", "jpeg", "tiff"]
         for ext in extensions {
             let url = iconsFolderURL.appendingPathComponent("\(base).\(ext)")
@@ -67,8 +64,6 @@ enum PlatformStyle {
         }
         return nil
     }
-
-    // MARK: - Menu image (icon if available, else colour badge)
 
     static func menuImage(forName name: String) -> NSImage? {
         if let icon = iconImage(forName: name) { return fitted(icon, maxWidth: 26, maxHeight: 14) }
@@ -89,8 +84,7 @@ enum PlatformStyle {
         return out
     }
 
-    /// A crisp capsule pill (region code in white) — the fallback when no icon file exists.
-    /// Rendered at 2× into a bitmap so it stays sharp on Retina.
+    // drawn at 2x, otherwise it looks like mush on retina
     static func menuBadge(forName name: String) -> NSImage? {
         guard isKnown(name) else { return nil }
         let attributes: [NSAttributedString.Key: Any] = [

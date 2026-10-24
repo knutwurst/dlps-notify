@@ -2,18 +2,14 @@ import Foundation
 import Combine
 import DLPSNotifyCore
 
-/// Whether the user owns a game (matched against their library file) and whether
-/// their version looks current.
 enum OwnershipStatus {
-    case unknown            // no library configured
+    case unknown   // no library file set
     case notOwned
     case owned(myVersion: String?)
     case updateAvailable(myVersion: String?)
 }
 
-/// Loads and re-reads the user's library file. Uses a security-scoped bookmark so
-/// access persists across launches, even for TCC-protected folders (Dropbox/iCloud,
-/// Desktop, Documents…). A failed read never wipes the already-loaded list.
+// security-scoped bookmark, because Dropbox + TCC really don't want me to read this file
 final class LibraryModel: ObservableObject {
     @Published private(set) var index = LibraryIndex(games: [])
     @Published private(set) var games: [LibraryGame] = []
@@ -32,8 +28,6 @@ final class LibraryModel: ObservableObject {
     var count: Int { index.count }
     var fileName: String? { path.map { ($0 as NSString).lastPathComponent } }
 
-    /// Configure from a user-picked URL: store the path (for display) and a
-    /// security-scoped bookmark (for persistent read access), then load.
     func setURL(_ url: URL) {
         path = url.path
         UserDefaults.standard.set(url.path, forKey: pathKey)
@@ -57,7 +51,7 @@ final class LibraryModel: ObservableObject {
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
 
         guard let text = try? String(contentsOf: url, encoding: .utf8) else {
-            return index.count   // keep the last good data on a transient read failure
+            return index.count   // read failed (hi TCC), keep what we had
         }
         let parsed = LibraryParser.parse(text)
         games = parsed
@@ -66,7 +60,6 @@ final class LibraryModel: ObservableObject {
         return index.count
     }
 
-    /// Re-read only if the file changed since last read (called on each poll).
     func reloadIfChanged() {
         guard let (url, scoped) = resolveURL() else { return }
         if scoped { _ = url.startAccessingSecurityScopedResource() }
@@ -94,7 +87,6 @@ final class LibraryModel: ObservableObject {
         (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
     }
 
-    /// Ownership + version status for a DLPS entry (platform-aware name fallback).
     func status(codes: [String]?, name: String, platform: String?, dlpsVersions: [String]?) -> OwnershipStatus {
         guard !index.isEmpty else { return .unknown }
         var game: LibraryGame?

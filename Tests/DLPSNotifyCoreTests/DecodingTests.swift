@@ -3,7 +3,7 @@ import XCTest
 
 final class DecodingTests: XCTestCase {
 
-    /// A trimmed but realistic slice of an actual `/wp-json/wp/v2/posts` response.
+    // trimmed copy of a real response
     private let sampleJSON = """
     [
       {"id":214493,"date":"2026-06-22T00:59:08","modified":"2026-06-22T01:10:22","link":"https://dlpsgame.com/eriksholm-the-stolen-dream-ps5/","title":{"rendered":"Eriksholm The Stolen Dream"}},

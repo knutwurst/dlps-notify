@@ -1,6 +1,5 @@
 import Foundation
 
-/// Something worth notifying the user about.
 public enum GameEvent: Equatable, Sendable {
     case new(GamePost)
     case updated(GamePost)
@@ -18,12 +17,8 @@ public enum GameEvent: Equatable, Sendable {
     }
 }
 
-/// Persisted detection state.
-///
-/// - `lastModified`: high-water mark; the next poll asks the API for everything
-///   `modified_after` this value.
-/// - `seen`: maps post id (as string, for JSON) to the last `modified` value we
-///   already processed, so a repeated fetch of the same change is not re-notified.
+// lastModified: high-water mark for the next poll
+// seen: post id -> last modified I already handled
 public struct DetectorState: Codable, Equatable, Sendable {
     public var lastModified: String
     public var seen: [String: String]
@@ -34,16 +29,11 @@ public struct DetectorState: Codable, Equatable, Sendable {
     }
 }
 
-/// Pure decision logic: given the current state and a batch of freshly fetched
-/// posts, decide which are new games, which are updates, and what the next state
-/// should be. No network, no disk, no UI — so it is trivially unit-testable.
 public enum ChangeDetector {
-    /// A post whose `modified` is within this window of its `date` counts as a
-    /// brand-new game; a larger gap means an update to an existing game.
+    // modified within this window of date = new game, later = update
     public static let newGameThreshold: TimeInterval = 24 * 60 * 60
 
-    /// Classify a post we are seeing for the first time, using only its own
-    /// timestamps. Falls back to `.new` when timestamps can't be parsed.
+    // unparseable timestamps -> just call it new
     public static func classifyFirstSeen(_ post: GamePost) -> GameEvent {
         guard let published = DLPSDate.parse(post.date),
               let modified = DLPSDate.parse(post.modified) else {
@@ -54,19 +44,14 @@ public enum ChangeDetector {
             : .new(post)
     }
 
-    /// - Parameters:
-    ///   - state: current persisted state.
-    ///   - fetched: posts returned by the API (any order).
-    ///   - seeding: first run — prime the state but emit no events (so the user
-    ///     is not flooded with a notification for every existing game).
-    /// - Returns: events to notify (chronological, oldest first) and the new state.
+    // seeding = first run: fill the state but stay quiet. nobody wants 300 notifications at once.
     public static func detect(state: DetectorState,
                               fetched: [GamePost],
                               seeding: Bool = false) -> (events: [GameEvent], state: DetectorState) {
         var newState = state
         var events: [GameEvent] = []
 
-        // Oldest change first, so notifications arrive in chronological order.
+        // oldest first
         let ordered = fetched.sorted { $0.modified < $1.modified }
 
         for post in ordered {
@@ -77,7 +62,7 @@ public enum ChangeDetector {
                 if post.modified > previousModified {
                     event = .updated(post)
                 }
-                // else: already processed this exact modification — dedup, skip.
+                // seen that exact change already
             } else {
                 event = classifyFirstSeen(post)
             }

@@ -1,8 +1,6 @@
 import Foundation
 
-/// Minimal logger that writes to stderr *and* to a file, so log lines are
-/// readable whether the app is run directly or launched via Launch Services
-/// (`open`), where stderr would otherwise disappear into the unified log.
+// stderr vanishes when launched via `open`, so also write to a file
 enum Log {
     static let fileURL: URL = {
         let base = FileManager.default
@@ -12,7 +10,6 @@ enum Log {
         return base.appendingPathComponent("dlps.log")
     }()
 
-    /// Truncate the log at launch so each run is easy to read.
     static func reset() {
         try? Data().write(to: fileURL)
     }

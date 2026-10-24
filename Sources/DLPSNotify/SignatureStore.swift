@@ -1,7 +1,6 @@
 import Foundation
 
-/// Per-post snapshot of download entries (region + group/format), used to diff
-/// what an update changed. Keyed by post id (as string, for JSON).
+// download entries per post id, so I can diff what an update added
 enum SignatureStore {
     private static let key = "downloadSignatures"
     private static let maxPosts = 800

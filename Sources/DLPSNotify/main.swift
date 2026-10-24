@@ -1,6 +1,6 @@
 import AppKit
 
-// Menu bar agent: no Dock icon, no main window.
+// menu bar only, no dock icon
 let delegate = AppDelegate()
 let application = NSApplication.shared
 application.delegate = delegate

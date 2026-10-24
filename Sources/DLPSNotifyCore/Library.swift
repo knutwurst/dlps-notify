@@ -1,12 +1,11 @@
 import Foundation
 
-/// One entry from the user's own library file, e.g.
-/// `Alan Wake II Deluxe Edition [PPSA02572] [v01.200.007] [PS5]`.
+// Alan Wake II Deluxe Edition [PPSA02572] [v01.200.007] [PS5]
 public struct LibraryGame: Equatable, Sendable {
-    public let code: String        // uppercased TitleID, e.g. "PPSA02572"
+    public let code: String
     public let name: String
-    public let version: String?    // without the leading "v", e.g. "01.200.007"
-    public let platform: String?   // "PS4", "PS5", …
+    public let version: String?   // no leading v
+    public let platform: String?
 
     public init(code: String, name: String, version: String?, platform: String?) {
         self.code = code
@@ -16,7 +15,6 @@ public struct LibraryGame: Equatable, Sendable {
     }
 }
 
-/// Fast lookup over a parsed library, by TitleID (exact) and normalized name (fallback).
 public struct LibraryIndex: Sendable {
     public private(set) var byCode: [String: LibraryGame] = [:]
     private var byNamePlatform: [String: LibraryGame] = [:]
@@ -28,7 +26,7 @@ public struct LibraryIndex: Sendable {
             byCode[game.code] = game
             let key = LibraryIndex.nameKey(game.name, game.platform)
             if let existing = byNamePlatform[key] {
-                // On duplicate name+platform keep the higher version (e.g. two "Valhalla" editions).
+                // two Valhalla editions? take the newer one
                 if preferNew(existing: existing, candidate: game) { byNamePlatform[key] = game }
             } else {
                 byNamePlatform[key] = game
@@ -46,7 +44,7 @@ public struct LibraryIndex: Sendable {
 
     public func game(forCode code: String) -> LibraryGame? { byCode[code.uppercased()] }
 
-    /// Name match requires the same platform — a PS4 title must not match a PS5 post.
+    // same platform only. learned that one the hard way (Dirt 5 PS4 vs PS5)
     public func game(forName name: String, platform: String?) -> LibraryGame? {
         byNamePlatform[LibraryIndex.nameKey(name, platform)]
     }
@@ -55,14 +53,13 @@ public struct LibraryIndex: Sendable {
         String(string.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) })
     }
 
-    /// Combined normalized-name + platform key for platform-aware matching.
     public static func nameKey(_ name: String, _ platform: String?) -> String {
         normalize(name) + "|" + (platform ?? "").uppercased()
     }
 }
 
 public enum LibraryParser {
-    /// Parse "Name [CODE] [vVERSION] [PLATFORM]" lines (version optional, tokens any order).
+    // tokens can come in any order, version is optional
     public static func parse(_ text: String) -> [LibraryGame] {
         text.split(whereSeparator: \.isNewline).compactMap { parseLine(String($0)) }
     }
@@ -103,7 +100,7 @@ public enum LibraryParser {
 }
 
 public enum VersionCompare {
-    /// Is `a` a newer version than `b`? nil if either can't be parsed as dotted numbers.
+    // nil if it isn't just numbers and dots
     public static func isNewer(_ a: String, than b: String) -> Bool? {
         let x = components(a), y = components(b)
         guard !x.isEmpty, !y.isEmpty else { return nil }

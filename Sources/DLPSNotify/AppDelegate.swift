@@ -33,7 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         if let stored = defaults.array(forKey: platformsKey) as? [String] {
             return Set(stored)
         }
-        return Platforms.allKeys   // default: everything
+        return Platforms.allKeys   // first launch: show me everything
     }
 
     private var onlyOwnedNotifications: Bool { defaults.bool(forKey: "onlyOwnedNotifications") }
@@ -67,7 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             return
         }
         if CommandLine.arguments.contains("--test-history-render") {
-            // Render the history view offscreen (no visible window) as a crash smoke test.
+            // renders the window offscreen, just to see it doesn't blow up
             let view = NSHostingView(rootView: MainWindowView(history: history, library: library))
             view.frame = NSRect(x: 0, y: 0, width: 720, height: 460)
             view.layoutSubtreeIfNeeded()
@@ -143,14 +143,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         let isSecondary = event?.type == .rightMouseUp
             || (event?.modifierFlags.contains(.control) ?? false)
         if isSecondary {
-            showHistoryAction()   // right-click / control-click → straight to the history
+            showHistoryAction()   // right click = history
         } else {
             showStatusMenu()
         }
     }
 
     private func showStatusMenu() {
-        rebuildMenu()   // rebuild each time so recent entries and platform icons are fresh
+        rebuildMenu()
         guard let menu = currentMenu else { return }
         menu.delegate = self
         statusItem.menu = menu
@@ -158,7 +158,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
 
     func menuDidClose(_ menu: NSMenu) {
-        // Detach so the next click reaches our handler (needed to catch right-clicks).
+        // unset the menu again, otherwise right clicks never reach us
         statusItem.menu = nil
     }
 
@@ -395,7 +395,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
 
     private func applyResult(events: [GameEvent], newState: DetectorState,
                              firstRun: Bool, fetchedCount: Int, metas: [Int: EventMeta]) {
-        // Advance state for ALL changes (dedup), regardless of platform filter.
+        // mark everything as seen, even platforms I filtered out
         store.update(newState)
         lastError = nil
         lastCheck = Date()
@@ -409,7 +409,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             var visible = events.filter {
                 Platforms.matches(categories: $0.post.categories, selectedKeys: selected)
             }
-            // Record everything (platform-filtered) to the history, with codes/versions.
             let entries = visible.reversed().map { event -> HistoryEntry in
                 let meta = metas[event.post.id]
                 return HistoryEntry(event: event, detail: meta?.detail,
@@ -417,7 +416,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             }
             history.add(entries)
 
-            // Notifications: optionally only for games in the user's library.
+            // toggle: only bug me about games I actually own
             if onlyOwnedNotifications && !library.index.isEmpty {
                 visible = visible.filter { event in
                     let meta = metas[event.post.id]
@@ -435,16 +434,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         rebuildMenu()
     }
 
-    /// Per-event metadata gathered from the post content.
     private struct EventMeta {
         var detail: String?
         var codes: [String]
         var versions: [String]
     }
 
-    /// For the given (already platform-filtered) events, fetch each post's content:
-    /// the "what changed" summary (updates), plus TitleID codes and version strings
-    /// for library matching. Bounded by `maxFetches`.
+    // one request per post, so keep it capped
     private func computeDetails(for events: [GameEvent]) async -> [Int: EventMeta] {
         guard !events.isEmpty else { return [:] }
         var signatures = SignatureStore.load()
@@ -472,9 +468,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         return metas
     }
 
-    /// Backfill: fetch everything modified in the last `days` days and merge it into
-    /// history (platform-filtered; no per-entry "what changed" — there is no earlier
-    /// snapshot to diff a backfilled entry against). Returns how many were added.
+    // no "what changed" here, there's no old snapshot to diff against
     @discardableResult
     private func backfillHistory(days: Int = 7) async -> Int {
         let watermark = DLPSDate.string(from: Date().addingTimeInterval(-Double(days) * 86_400))
@@ -512,7 +506,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         guard let key = sender.representedObject as? String else { return }
         var selected = selectedPlatformKeys
         if selected.contains(key) { selected.remove(key) } else { selected.insert(key) }
-        // Never allow an empty selection (would notify nothing) — fall back to all.
+        // unchecking everything = silence forever. nope.
         if selected.isEmpty { selected = Platforms.allKeys }
         defaults.set(Array(selected), forKey: platformsKey)
         rebuildMenu()
@@ -531,7 +525,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
 
     @objc private func openPlatformIconsFolder() {
         PlatformStyle.ensureIconsFolder()
-        PlatformStyle.clearIconCache()   // pick up any files added since launch
+        PlatformStyle.clearIconCache()   // in case new icons got dropped in
         NSWorkspace.shared.open(PlatformStyle.iconsFolderURL)
     }
 
@@ -574,7 +568,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             historyWindow = window
         }
         historyWindow?.title = "DLPS Notify — " + L10n.t(.history)
-        // Become a regular app while the window is open so it can take focus.
+        // accessory apps can't really grab focus, so be a regular app while the window is open
         NSApp.setActivationPolicy(.regular)
         historyWindow?.center()
         historyWindow?.makeKeyAndOrderFront(nil)
@@ -582,13 +576,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
 
     func windowWillClose(_ notification: Notification) {
-        // Back to a menu-bar-only agent when the history window closes.
         NSApp.setActivationPolicy(.accessory)
     }
 
     @objc private func quitAction() { NSApplication.shared.terminate(nil) }
 
-    // MARK: Launch-at-login
+    // MARK: Launch at login
 
     private func loginEnabled() -> Bool {
         if #available(macOS 13.0, *) { return SMAppService.mainApp.status == .enabled }
@@ -609,7 +602,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         rebuildMenu()
     }
 
-    // MARK: Self-test (automated verification path)
+    // MARK: Debug flags
 
     private func runSelfTest() {
         log("SELFTEST start; notifier channel=\(ExternalNotifier.channelName)")

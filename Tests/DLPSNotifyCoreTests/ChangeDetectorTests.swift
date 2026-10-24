@@ -18,14 +18,14 @@ final class ChangeDetectorTests: XCTestCase {
     }
 
     func testNewGameWithQuickPostPublishEditStaysNew() {
-        // Published 00:59, tidied up 11 minutes later — still a new game.
+        // published 00:59, tidied up 11 min later. still new.
         let p = post(2, date: "2026-06-22T00:59:08", modified: "2026-06-22T01:10:22")
         let (events, _) = ChangeDetector.detect(state: DetectorState(), fetched: [p])
         XCTAssertEqual(events, [.new(p)])
     }
 
     func testOldPostSeenForFirstTimeIsAnUpdate() {
-        // Old game (published months ago) bubbling up because it was just patched.
+        // months old, pops up again because it got patched
         let p = post(3, date: "2025-12-28T08:36:00", modified: "2026-06-22T07:16:00")
         let (events, _) = ChangeDetector.detect(state: DetectorState(), fetched: [p])
         XCTAssertEqual(events, [.updated(p)])
@@ -64,7 +64,7 @@ final class ChangeDetectorTests: XCTestCase {
     func testEventsAreChronologicalOldestFirst() {
         let newer = post(20, date: "2026-06-22T05:00:00", modified: "2026-06-22T05:00:00", title: "Newer")
         let older = post(21, date: "2026-06-22T01:00:00", modified: "2026-06-22T01:00:00", title: "Older")
-        // Fed newest-first; detector should reorder to oldest-first.
+        // newest first in, oldest first out
         let (events, _) = ChangeDetector.detect(state: DetectorState(), fetched: [newer, older])
 
         XCTAssertEqual(events.map(\.post.id), [21, 20])
@@ -81,12 +81,12 @@ final class ChangeDetectorTests: XCTestCase {
     }
 
     func testNewThenUpdateAcrossTwoPolls() {
-        // First poll: brand new game.
+        // first poll: new game
         let first = post(40, date: "2026-06-22T01:00:00", modified: "2026-06-22T01:00:00")
         let (e1, s1) = ChangeDetector.detect(state: DetectorState(), fetched: [first])
         XCTAssertEqual(e1, [.new(first)])
 
-        // Second poll: same id, later modification -> update, not a new game.
+        // second poll, same id, later modified -> update
         let second = post(40, date: "2026-06-22T01:00:00", modified: "2026-06-22T08:00:00")
         let (e2, _) = ChangeDetector.detect(state: s1, fetched: [second])
         XCTAssertEqual(e2, [.updated(second)])

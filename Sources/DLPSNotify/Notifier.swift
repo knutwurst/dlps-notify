@@ -1,14 +1,9 @@
 import Foundation
 import DLPSNotifyCore
 
-/// App-facing notification API. Branding + localized wording live here; delivery
-/// is done by `ExternalNotifier`. Every notification is titled "DLPS Notify" and
-/// carries our own icon, so it reads as our app even though delivery goes through
-/// a helper.
 enum Notifier {
     private static let siteURL = "https://dlpsgame.com/daily-update-on-changes-to-game/"
 
-    /// `detail` is an optional "what changed" summary for updates, e.g. "+ USA (@DUPLEX)".
     static func post(event: GameEvent, detail: String? = nil) {
         var parts = [event.isNew ? L10n.t(.notifNewGame) : L10n.t(.notifUpdate)]
         if let platform = event.post.platforms.first { parts.append(platform.name) }

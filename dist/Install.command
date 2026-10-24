@@ -1,7 +1,6 @@
 #!/bin/bash
 #
-# DLPS Notify installer.
-# First time: right-click (Control-click) this file and choose "Open".
+# first run: right click -> Open
 #
 set -e
 
@@ -18,15 +17,13 @@ if [ ! -d "$SRC" ]; then
     exit 1
 fi
 
-# Quit a running instance, replace the app.
 osascript -e 'tell application "DLPSNotify" to quit' >/dev/null 2>&1 || true
 rm -rf "$DEST"
 cp -R "$SRC" "$DEST"
 
-# Gatekeeper-friendly: strip the quarantine flag so it launches without warnings.
+# no quarantine flag = no Gatekeeper nagging
 xattr -cr "$DEST" 2>/dev/null || true
 
-# Register with Launch Services and start it.
 "$LSREGISTER" -f "$DEST" >/dev/null 2>&1 || true
 open "$DEST"
 

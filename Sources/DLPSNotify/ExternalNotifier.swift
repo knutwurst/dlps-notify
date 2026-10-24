@@ -1,14 +1,9 @@
 import Foundation
 
-/// Delivers notifications via `terminal-notifier`, which (unlike an ad-hoc-signed
-/// app's own UNUserNotificationCenter / NSUserNotification) reliably displays on
-/// macOS. We brand it: title "DLPS Notify", our own app icon via `-appIcon`, and
-/// `-open` to launch the game page on click. No `-sender` (that hangs on macOS 26
-/// and refuses ad-hoc bundles); the small sender label therefore reads
-/// "terminal-notifier", but the icon, title and content are all DLPS Notify.
+// terminal-notifier does the actual delivery. ad-hoc signed apps can't post
+// their own notifications on macOS 26, and -sender just hangs. so be it.
 enum ExternalNotifier {
-    /// terminal-notifier location: the copy bundled into the app first (so the
-    /// release is self-contained), then Homebrew, then PATH.
+    // bundled copy first, then homebrew, then PATH
     static let terminalNotifierPath: String? = {
         let fm = FileManager.default
         if let resources = Bundle.main.resourcePath {
@@ -25,7 +20,6 @@ enum ExternalNotifier {
         terminalNotifierPath != nil ? "terminal-notifier" : "osascript"
     }
 
-    /// Path to the bundled icon used for `-appIcon`, if present.
     static var appIconPath: String? {
         guard let resources = Bundle.main.resourcePath else { return nil }
         let path = resources + "/appicon.png"
@@ -46,10 +40,7 @@ enum ExternalNotifier {
         }
     }
 
-    // MARK: - Process helpers
-
-    /// Fire-and-forget: never block the caller (the main thread). terminal-notifier
-    /// without `-sender` exits on its own, so no process is leaked.
+    // fire and forget, never block the main thread
     private static func launch(_ launchPath: String, _ arguments: [String]) {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: launchPath)

@@ -1,7 +1,6 @@
 import SwiftUI
 import DLPSNotifyCore
 
-/// Platform indicator: user-supplied icon if present, else a colour-coded badge.
 struct PlatformCell: View {
     let platform: String?
     var body: some View {
@@ -23,7 +22,6 @@ struct PlatformCell: View {
     }
 }
 
-/// The window: two tabs — the DLPS event log, and the user's own game library.
 struct MainWindowView: View {
     @ObservedObject var history: HistoryModel
     @ObservedObject var library: LibraryModel
@@ -42,13 +40,13 @@ struct MainWindowView: View {
     }
 }
 
-// MARK: - History tab (the raw DLPS event log)
+// MARK: - History
 
 struct HistoryTab: View {
     @ObservedObject var model: HistoryModel
     var onLoadMore: () async -> Void = {}
     @State private var search = ""
-    @State private var filter = 0   // 0 = all, 1 = new games, 2 = updates
+    @State private var filter = 0   // 0 all, 1 new, 2 updates
     @State private var isLoading = false
 
     private var filtered: [HistoryEntry] {
@@ -118,15 +116,15 @@ struct HistoryTab: View {
     }
 }
 
-// MARK: - Library tab (your games, deduped, with DLPS status)
+// MARK: - My games
 
 struct LibraryRow: Identifiable {
-    let id: String            // TitleID code
+    let id: String   // TitleID
     let name: String
     let platform: String?
     let myVersion: String?
     let dlpsVersion: String?
-    let lastSeen: String?     // display date of latest DLPS activity
+    let lastSeen: String?
     let link: String?
     let updateAvailable: Bool
 }
@@ -139,7 +137,7 @@ struct LibraryTab: View {
     @State private var onlyUpdates = false
 
     private var rows: [LibraryRow] {
-        // Latest DLPS entry per code and per normalized name (history is newest-first).
+        // history is newest first, so the first hit wins
         var byCode: [String: HistoryEntry] = [:]
         var byName: [String: HistoryEntry] = [:]
         for entry in history.entries {

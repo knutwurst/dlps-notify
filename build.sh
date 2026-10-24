@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 #
-# Build DLPSNotify and assemble a runnable, self-contained, ad-hoc-signed .app.
-# Bundles terminal-notifier so the app needs no Homebrew at runtime.
-# Usage: ./build.sh [debug|release]   (default: release)
+# builds the .app and bundles terminal-notifier, no homebrew needed
+# ./build.sh [debug|release], default is release
 #
 set -euo pipefail
 
@@ -22,7 +21,6 @@ cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 cp "$ROOT/Resources/appicon.png" "$APP/Contents/Resources/appicon.png"
 
-# Bundle terminal-notifier (self-contained: no Homebrew needed on the target Mac).
 TN_APP=""
 if command -v brew >/dev/null 2>&1; then
   CANDIDATE="$(brew --prefix terminal-notifier 2>/dev/null)/terminal-notifier.app"

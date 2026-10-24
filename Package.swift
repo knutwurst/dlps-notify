@@ -5,10 +5,9 @@ let package = Package(
     name: "DLPSNotify",
     platforms: [.macOS(.v13)],
     targets: [
-        // Pure, network/AppKit-free logic — fully unit-testable.
+        // no AppKit in here, so the tests can poke at it
         .target(name: "DLPSNotifyCore"),
 
-        // The menu bar app itself (AppKit + UserNotifications).
         .executableTarget(
             name: "DLPSNotify",
             dependencies: ["DLPSNotifyCore"]

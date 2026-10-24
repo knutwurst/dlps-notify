@@ -1,10 +1,9 @@
 import Foundation
 
-/// A PlayStation platform as exposed by the DLPS WordPress category taxonomy.
 public struct Platform: Hashable, Sendable {
-    public let key: String        // stable id used in settings, e.g. "ps5"
-    public let name: String       // display name, e.g. "PS5"
-    public let categoryID: Int    // WordPress category id
+    public let key: String   // stored in settings
+    public let name: String
+    public let categoryID: Int
 
     public init(key: String, name: String, categoryID: Int) {
         self.key = key
@@ -14,8 +13,7 @@ public struct Platform: Hashable, Sendable {
 }
 
 public enum Platforms {
-    /// The platform categories that actually exist on dlpsgame.com (verified via
-    /// the categories API). The site is PlayStation-only — no Xbox/Switch.
+    // checked against the categories API. PlayStation only, no Xbox/Switch.
     public static let all: [Platform] = [
         Platform(key: "ps5", name: "PS5", categoryID: 63019),
         Platform(key: "ps4", name: "PS4", categoryID: 4370),
@@ -33,8 +31,7 @@ public enum Platforms {
         categories.compactMap { byCategoryID[$0] }
     }
 
-    /// Whether a post passes the platform filter. Posts with no recognized
-    /// platform always pass, so nothing is silently dropped.
+    // no recognized platform -> let it through, never drop stuff silently
     public static func matches(categories: [Int], selectedKeys: Set<String>) -> Bool {
         let postPlatforms = platforms(for: categories)
         if postPlatforms.isEmpty { return true }

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #
-# Package DLPSNotify.app into a distributable .dmg with a gatekeeper-friendly
-# installer. Run ./build.sh first.
+# run ./build.sh first
 #
 set -euo pipefail
 

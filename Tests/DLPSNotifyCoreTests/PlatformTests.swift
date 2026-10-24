@@ -13,7 +13,7 @@ final class PlatformTests: XCTestCase {
         XCTAssertTrue(Platforms.matches(categories: [63019], selectedKeys: ["ps5"]))
         XCTAssertFalse(Platforms.matches(categories: [4370], selectedKeys: ["ps5"]))
         XCTAssertTrue(Platforms.matches(categories: [4370, 81], selectedKeys: ["ps4", "ps5"]))
-        // A post with no recognized platform always passes (never silently dropped).
+        // no platform -> passes
         XCTAssertTrue(Platforms.matches(categories: [81], selectedKeys: ["ps5"]))
     }
 

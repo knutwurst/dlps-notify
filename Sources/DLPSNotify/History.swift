@@ -2,27 +2,22 @@ import Foundation
 import Combine
 import DLPSNotifyCore
 
-/// One recorded new-game or update event. Persisted as the app's history "database".
 struct HistoryEntry: Codable, Identifiable, Equatable {
     let postID: Int
     let name: String
     let link: String
     let isNew: Bool
     let platform: String?
-    /// Site timestamp of the change ("yyyy-MM-dd'T'HH:mm:ss").
+    // site time, no timezone
     let modified: String?
-    /// For updates: what was added, e.g. "+ USA (@DUPLEX)".
+    // e.g. "+ USA (@DUPLEX)"
     let detail: String?
-    /// TitleID codes found in the post (for matching the user's library).
     let codes: [String]?
-    /// Dotted version strings found in the post (best-effort, for version compare).
     let dlpsVersions: [String]?
-    /// When this app recorded the event.
     let recordedAt: Date
 
-    /// Unique per event (a post can appear multiple times over its update history).
     var id: String { "\(postID)-\(modified ?? "")-\(Int(recordedAt.timeIntervalSince1970))" }
-    /// Identifies the same change regardless of when we recorded it (for dedup on backfill).
+    // same change = same key, no matter when I saw it (backfill dedup)
     var dedupKey: String { "\(postID)|\(modified ?? "")" }
     var url: URL? { URL(string: link) }
 
@@ -60,7 +55,6 @@ struct HistoryEntry: Codable, Identifiable, Equatable {
     }
 }
 
-/// Persists the full history to a JSON file (separate from the small menu list).
 enum HistoryStore {
     private static let maxEntries = 2000
 
@@ -91,7 +85,6 @@ enum HistoryStore {
     }
 }
 
-/// Observable history shared between the menu and the history window.
 final class HistoryModel: ObservableObject {
     @Published private(set) var entries: [HistoryEntry]
 
@@ -100,15 +93,13 @@ final class HistoryModel: ObservableObject {
         entries = loaded.isEmpty ? HistoryModel.migrateLegacyRecent() : loaded
     }
 
-    /// Prepend newest-first entries and persist.
     func add(_ newEntries: [HistoryEntry]) {
         guard !newEntries.isEmpty else { return }
         entries.insert(contentsOf: newEntries, at: 0)
         HistoryStore.save(entries)
     }
 
-    /// Merge backfilled entries (skip ones already present), sort newest-first, persist.
-    /// Returns how many were actually added.
+    // returns how many were actually new
     @discardableResult
     func merge(_ incoming: [HistoryEntry]) -> Int {
         guard !incoming.isEmpty else { return 0 }
@@ -126,7 +117,7 @@ final class HistoryModel: ObservableObject {
         return added
     }
 
-    /// One-time migration of the old capped menu list (UserDefaults) into history.
+    // old versions kept the menu list in UserDefaults. move it over once.
     private static func migrateLegacyRecent() -> [HistoryEntry] {
         struct Legacy: Decodable {
             let id: Int; let name: String; let link: String; let isNew: Bool
@@ -146,7 +137,6 @@ final class HistoryModel: ObservableObject {
     }
 }
 
-/// Full "dd.MM.yyyy HH:mm" rendering for the history table (no today-collapsing).
 enum DateDisplay {
     static func full(_ apiTimestamp: String?, recordedAt: Date) -> String {
         if let apiTimestamp, let formatted = fromISO(apiTimestamp) { return formatted }

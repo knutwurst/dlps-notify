@@ -6,13 +6,8 @@ public struct APIError: Error, CustomStringConvertible {
     public var description: String { message }
 }
 
-/// Talks to the DLPS WordPress REST API.
-///
-/// Cloudflare returns 403 to clients without a browser-like User-Agent, so we
-/// always send one. The `/wp-json/wp/v2/posts` endpoint itself needs no auth.
+// Cloudflare 403s anything without a browser UA. the endpoint itself is public.
 public final class APIClient {
-    /// A realistic desktop-Chrome UA — verified to pass Cloudflare where the
-    /// default URLSession UA gets a 403.
     public static let userAgent =
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
     public static let fields = "id,date,modified,link,title,categories"
@@ -37,7 +32,6 @@ public final class APIClient {
         }
     }
 
-    /// Most recently modified posts — used to seed state on first run.
     public func fetchLatest(perPage: Int = 50) async throws -> [GamePost] {
         let url = buildURL(page: 1, query: [
             .init(name: "per_page", value: String(perPage)),
@@ -48,9 +42,7 @@ public final class APIClient {
         return try await fetchPosts(url)
     }
 
-    /// Every post modified strictly after `watermark`, drained across pages in
-    /// ascending order so a backlog (e.g. the app was closed for days) is fully
-    /// captured rather than truncated. Empty watermark falls back to `fetchLatest`.
+    // pages through everything after the watermark, oldest first, so a few days offline don't lose anything
     public func fetchChanges(modifiedAfter watermark: String,
                              perPage: Int = 100,
                              maxPages: Int = 50) async throws -> [GamePost] {
@@ -71,7 +63,7 @@ public final class APIClient {
             do {
                 batch = try await fetchPosts(url)
             } catch let error as APIError where error.message.contains("invalid_page") {
-                break   // ran past the last available page
+                break   // past the last page
             }
 
             all.append(contentsOf: batch)
@@ -81,8 +73,6 @@ public final class APIClient {
         return all
     }
 
-    /// The rendered HTML content of a single post (used to detect what an update
-    /// changed). Returns "" if the post has no content.
     public func fetchContent(postID: Int) async throws -> String {
         var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
         components.path = "/wp-json/wp/v2/posts/\(postID)"

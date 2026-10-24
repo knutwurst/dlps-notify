@@ -1,8 +1,6 @@
 import Foundation
 
-/// Lightweight in-app localization. English is the default and the fallback for
-/// any missing key. Add a language by adding a case to `Language`, its native
-/// name, and a table below.
+// poor man's localization. english is the fallback for anything missing.
 enum L10n {
     enum Language: String, CaseIterable {
         case english = "en"
@@ -37,13 +35,12 @@ enum L10n {
             }
         }
 
-        /// Base code used to match the system language (e.g. "zh-Hans" → "zh").
+        // "zh-Hans" -> "zh"
         var matchPrefix: String {
             rawValue.hasPrefix("zh") ? "zh" : rawValue
         }
     }
 
-    /// UserDefaults value: "system" or a language code. Default is English.
     static let preferenceKey = "language"
     static let defaultPreference = "en"
 
@@ -59,7 +56,6 @@ enum L10n {
         return Language(rawValue: preference) ?? .english
     }
 
-    /// Options for the language submenu: System + every language by native name.
     static var menuOptions: [(code: String, title: String)] {
         [("system", t(.languageSystem))] + Language.allCases.map { ($0.rawValue, $0.nativeName) }
     }
@@ -85,7 +81,7 @@ enum L10n {
         case tabMyGames, colMyVersion, colDlpsVersion, colLastSeen, libraryFileLabel, onlyUpdates
     }
 
-    /// Used by `--dump-langs` to verify every table renders.
+    // for --dump-langs
     static func debugDump() -> String {
         var out = "languages: \(Language.allCases.count)\n"
         for lang in Language.allCases {
